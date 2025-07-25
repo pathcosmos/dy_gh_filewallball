@@ -1,0 +1,42 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: filewallball-metrics-config
+  namespace: filewallball
+data:
+  prometheus-rules.yaml: |
+    groups:
+    - name: filewallball.rules
+      rules:
+      - alert: FileWallBallHighErrorRate
+        expr: rate(filewallball_http_requests_total{status=~"5.."}[5m]) > 0.1
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High error rate detected"
+          description: "FileWallBall API is returning high error rate"
+      
+      - alert: FileWallBallHighLatency
+        expr: histogram_quantile(0.95, rate(filewallball_http_request_duration_seconds_bucket[5m])) > 1
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High latency detected"
+          description: "FileWallBall API response time is high"
+    
+  service-monitor.yaml: |
+    apiVersion: monitoring.coreos.com/v1
+    kind: ServiceMonitor
+    metadata:
+      name: filewallball-api-monitor
+      namespace: filewallball
+    spec:
+      selector:
+        matchLabels:
+          app: filewallball-api
+      endpoints:
+      - port: metrics
+        interval: 30s
+        path: /metrics 

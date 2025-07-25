@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: filewallball-backup-pv
+  labels:
+    type: local-backup
+spec:
+  storageClassName: microk8s-hostpath
+  capacity:
+    storage: 10Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/home/lanco/cursor/fileWallBall/backups"
+  persistentVolumeReclaimPolicy: Retain
+  volumeMode: Filesystem 
