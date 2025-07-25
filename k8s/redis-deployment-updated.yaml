@@ -68,23 +68,10 @@ spec:
       volumes:
       - name: redis-config
         configMap:
-          name: redis-config
+          name: redis-advanced-config
           items:
           - key: redis.conf
             path: redis.conf
       - name: redis-data
         persistentVolumeClaim:
-          claimName: redis-pvc
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: redis-service
-  namespace: filewallball
-spec:
-  selector:
-    app: redis
-  ports:
-  - port: 6379
-    targetPort: 6379
-  type: ClusterIP 
+          claimName: redis-pvc 
