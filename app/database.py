@@ -12,26 +12,39 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# 데이터베이스 설정
-DB_HOST = os.getenv('DB_HOST', 'mariadb-service')
-DB_PORT = os.getenv('DB_PORT', '3306')
-DB_NAME = os.getenv('DB_NAME', 'filewallball_db')
-DB_USER = os.getenv('DB_USER', 'filewallball_user')
-DB_PASSWORD = os.getenv('DB_PASSWORD', 'filewallball_user_password')
+# 데이터베이스 설정 - 로컬 개발용 SQLite
+DB_HOST = os.getenv('DB_HOST', 'localhost')
+DB_NAME = os.getenv('DB_NAME', 'filewallball.db')
 
-# 데이터베이스 URL
-DATABASE_URL = f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+# SQLite URL (로컬 개발용)
+if DB_HOST == 'localhost':
+    DATABASE_URL = f"sqlite:///./{DB_NAME}"
+else:
+    # MariaDB URL (프로덕션용)
+    DB_PORT = os.getenv('DB_PORT', '3306')
+    DB_USER = os.getenv('DB_USER', 'filewallball_user')
+    DB_PASSWORD = os.getenv('DB_PASSWORD', 'filewallball_user_password')
+    DATABASE_URL = f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
 # SQLAlchemy 설정
-engine = create_engine(
-    DATABASE_URL,
-    poolclass=QueuePool,
-    pool_size=10,
-    max_overflow=20,
-    pool_pre_ping=True,
-    pool_recycle=3600,
-    echo=False  # SQL 로그 출력 여부
-)
+if DB_HOST == 'localhost':
+    # SQLite 설정
+    engine = create_engine(
+        DATABASE_URL,
+        connect_args={"check_same_thread": False},
+        echo=False
+    )
+else:
+    # MariaDB 설정
+    engine = create_engine(
+        DATABASE_URL,
+        poolclass=QueuePool,
+        pool_size=10,
+        max_overflow=20,
+        pool_pre_ping=True,
+        pool_recycle=3600,
+        echo=False
+    )
 
 # 세션 팩토리
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

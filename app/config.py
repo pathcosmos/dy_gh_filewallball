@@ -16,30 +16,31 @@ class Settings(BaseSettings):
         "extra": "ignore"
     }
     
-    # 애플리케이션 기본 설정
-    app_name: str = Field(default="FileWallBall API", env="APP_NAME")
-    app_version: str = Field(default="1.0.0", env="APP_VERSION")
-    debug: bool = Field(default=False, env="DEBUG")
+    # 기본 설정
+    app_name: str = "FileWallBall API"
+    app_version: str = "1.0.0"
+    debug: bool = False
+    environment: str = "development"
     
     # 서버 설정
-    host: str = Field(default="0.0.0.0", env="HOST")
-    port: int = Field(default=8000, env="PORT")
+    host: str = "0.0.0.0"
+    port: int = 8000
     
-    # 데이터베이스 설정 (MariaDB)
-    db_host: str = Field(default="mariadb-service", env="DB_HOST")
-    db_port: int = Field(default=3306, env="DB_PORT")
-    db_name: str = Field(default="filewallball_db", env="DB_NAME")
-    db_user: str = Field(default="filewallball_user", env="DB_USER")
-    db_password: str = Field(default="filewallball_user_password", env="DB_PASSWORD")
-    db_pool_size: int = Field(default=10, env="DB_POOL_SIZE")
-    db_max_overflow: int = Field(default=20, env="DB_MAX_OVERFLOW")
+    # 데이터베이스 설정 - 로컬 개발용 SQLite
+    db_host: str = "localhost"
+    db_port: int = 3306
+    db_name: str = "filewallball.db"
+    db_user: str = ""
+    db_password: str = ""
+    db_pool_size: int = 10
+    db_max_overflow: int = 20
     
     # Redis 설정
-    redis_host: str = Field(default="redis-service", env="REDIS_HOST")
-    redis_port: int = Field(default=6379, env="REDIS_PORT")
-    redis_password: Optional[str] = Field(default=None, env="REDIS_PASSWORD")
-    redis_db: int = Field(default=0, env="REDIS_DB")
-    redis_pool_size: int = Field(default=20, env="REDIS_POOL_SIZE")
+    redis_host: str = "localhost"
+    redis_port: int = 6379
+    redis_password: str = ""
+    redis_db: int = 0
+    redis_pool_size: int = 20
     
     # 파일 저장 설정
     upload_dir: str = Field(default="./uploads", env="UPLOAD_DIR")
@@ -102,14 +103,29 @@ class Settings(BaseSettings):
         upload_path.mkdir(parents=True, exist_ok=True)
         return str(upload_path)
     
+    # SQLite URL 생성
     @property
     def database_url(self) -> str:
-        """데이터베이스 URL 생성"""
-        return f"mysql+pymysql://{self.db_user}:{self.db_password}@{self.db_host}:{self.db_port}/{self.db_name}"
+        if self.environment == "development" and self.db_host == "localhost":
+            return f"sqlite:///./{self.db_name}"
+        else:
+            return f"mysql+pymysql://{self.db_user}:{self.db_password}@{self.db_host}:{self.db_port}/{self.db_name}"
     
     @property
     def redis_url(self) -> str:
         """Redis URL 생성"""
         if self.redis_password:
             return f"redis://:{self.redis_password}@{self.redis_host}:{self.redis_port}/{self.redis_db}"
-        return f"redis://{self.redis_host}:{self.redis_port}/{self.redis_db}" 
+        return f"redis://{self.redis_host}:{self.redis_port}/{self.redis_db}"
+
+
+# 전역 설정 인스턴스
+_settings = None
+
+
+def get_settings() -> Settings:
+    """설정 인스턴스 반환 (싱글톤 패턴)"""
+    global _settings
+    if _settings is None:
+        _settings = Settings()
+    return _settings 

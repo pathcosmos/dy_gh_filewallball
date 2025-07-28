@@ -1,0 +1,41 @@
+# Task ID: 10
+# Title: 헬스체크 및 모니터링 시스템 구현
+# Status: pending
+# Dependencies: 9
+# Priority: medium
+# Description: 헬스체크 엔드포인트, 라이브니스/레디니스 프로브, Prometheus 메트릭
+# Details:
+헬스체크 구현:
+```python
+@router.get("/health")
+async def health_check():
+    # 데이터베이스 연결 확인
+    try:
+        await db.execute("SELECT 1")
+        db_status = "healthy"
+    except Exception:
+        db_status = "unhealthy"
+    
+    # Redis 연결 확인
+    try:
+        redis_client.ping()
+        redis_status = "healthy"
+    except Exception:
+        redis_status = "unhealthy"
+    
+    return {
+        "status": "healthy" if db_status == "healthy" and redis_status == "healthy" else "unhealthy",
+        "database": db_status,
+        "cache": redis_status,
+        "timestamp": datetime.utcnow()
+    }
+```
+
+Prometheus 메트릭:
+- 파일 업로드/다운로드 카운터
+- 응답 시간 히스토그램
+- 활성 연결 수
+- 에러율 측정
+
+# Test Strategy:
+헬스체크 엔드포인트 응답 확인, 데이터베이스/Redis 장애 시 상태 변경 테스트, Prometheus 메트릭 수집 검증, 프로브 동작 확인

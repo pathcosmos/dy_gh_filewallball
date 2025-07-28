@@ -1,0 +1,288 @@
+# Task ID: 6
+# Title: 파일 업로드 API 구현
+# Status: pending
+# Dependencies: 5
+# Priority: high
+# Description: 파일 업로드 엔드포인트, UUID 생성, 메타데이터 저장, 파일 검증
+# Details:
+파일 업로드 API 구현:
+```python
+@router.post("/upload")
+async def upload_file(file: UploadFile = File(...)):
+    # 파일 검증 (크기, 타입)
+    if file.size > 100 * 1024 * 1024:  # 100MB 제한
+        raise HTTPException(400, "파일 크기가 너무 큽니다")
+    
+    # UUID 생성 및 파일 저장
+    file_uuid = str(uuid.uuid4())
+    file_hash = hashlib.md5(await file.read()).hexdigest()
+    
+    # 파일 저장 경로 생성
+    storage_path = f"/data/files/{file_uuid[:2]}/{file_uuid[2:4]}/{file_uuid}"
+    
+    # 메타데이터 DB 저장
+    file_info = FileInfo(
+        file_uuid=file_uuid,
+        original_filename=file.filename,
+        file_size=file.size,
+        file_hash=file_hash,
+        storage_path=storage_path
+    )
+    
+    return {
+        "file_id": file_uuid,
+        "view_url": f"/files/{file_uuid}",
+        "download_url": f"/download/{file_uuid}"
+    }
+```
+파일 중복 검사, 확장자별 분류, 에러 처리
+<info added on 2025-07-25T07:40:50.198Z>
+새로운 DB 스키마 구조에 맞춘 파일 업로드 API 업데이트:
+
+```python
+@app.post("/api/v1/files/upload")
+async def upload_file(
+    file: UploadFile,
+    category_id: Optional[int] = None,
+    tags: Optional[List[str]] = None,
+    is_public: bool = True,
+    description: Optional[str] = None
+):
+    # 1. 파일 확장자 검증 (file_extensions 테이블)
+    file_ext = file.filename.split('.')[-1].lower()
+    ext_check = db.query(FileExtension).filter(
+        FileExtension.extension == file_ext,
+        FileExtension.is_allowed == True
+    ).first()
+    if not ext_check:
+        raise HTTPException(400, f"허용되지 않는 파일 확장자입니다: {file_ext}")
+    
+    # 2. 파일 크기 검증 (system_settings에서 max_file_size 확인)
+    max_size_setting = db.query(SystemSetting).filter(
+        SystemSetting.key == "max_file_size"
+    ).first()
+    max_size = int(max_size_setting.value) if max_size_setting else 100 * 1024 * 1024
+    if file.size > max_size:
+        raise HTTPException(400, "파일 크기가 제한을 초과합니다")
+    
+    # 3. UUID 생성
+    file_uuid = str(uuid.uuid4())
+    
+    # 4. 파일 저장 (stored_filename 생성)
+    stored_filename = f"{file_uuid}.{file_ext}"
+    storage_path = f"/data/files/{file_uuid[:2]}/{file_uuid[2:4]}/{stored_filename}"
+    
+    # 5. MD5 해시 계산
+    file_content = await file.read()
+    file_hash = hashlib.md5(file_content).hexdigest()
+    
+    # 중복 파일 검사
+    existing_file = db.query(FileInfo).filter(FileInfo.file_hash == file_hash).first()
+    if existing_file:
+        return {
+            "file_uuid": existing_file.file_uuid,
+            "message": "동일한 파일이 이미 존재합니다",
+            "duplicate": True
+        }
+    
+    # 6. files 테이블에 메타데이터 저장
+    file_info = FileInfo(
+        file_uuid=file_uuid,
+        original_filename=file.filename,
+        stored_filename=stored_filename,
+        file_extension=file_ext,
+        mime_type=file.content_type,
+        file_size=file.size,
+        file_hash=file_hash,
+        storage_path=storage_path,
+        category_id=category_id,
+        is_public=is_public,
+        description=description
+    )
+    db.add(file_info)
+    
+    # 7. file_uploads 테이블에 업로드 기록
+    upload_record = FileUpload(
+        file_uuid=file_uuid,
+        upload_status="success",
+        upload_ip=request.client.host,
+        user_agent=request.headers.get("user-agent")
+    )
+    db.add(upload_record)
+    
+    # 8. 태그 지정 (file_tags, file_tag_relations)
+    if tags:
+        for tag_name in tags:
+            # 태그 존재 확인 또는 생성
+            tag = db.query(FileTag).filter(FileTag.name == tag_name).first()
+            if not tag:
+                tag = FileTag(name=tag_name)
+                db.add(tag)
+                db.flush()
+            
+            # 태그 관계 생성
+            tag_relation = FileTagRelation(
+                file_uuid=file_uuid,
+                tag_id=tag.id
+            )
+            db.add(tag_relation)
+    
+    db.commit()
+    
+    # 9. 응답 반환
+    return {
+        "file_uuid": file_uuid,
+        "original_filename": file.filename,
+        "stored_filename": stored_filename,
+        "file_size": file.size,
+        "mime_type": file.content_type,
+        "file_hash": file_hash,
+        "category_id": category_id,
+        "tags": tags or [],
+        "upload_status": "success",
+        "created_at": file_info.created_at.isoformat()
+    }
+```
+
+추가 검증 로직:
+- MIME 타입과 파일 확장자 일치성 검증
+- 파일 내용 기반 악성코드 스캔 (선택적)
+- 이미지 파일의 경우 메타데이터 추출
+- 업로드 속도 제한 (rate limiting)
+
+에러 처리 강화:
+- 파일 저장 실패 시 롤백 처리
+- 데이터베이스 트랜잭션 오류 처리
+- 디스크 용량 부족 예외 처리
+- 네트워크 중단 시 재시도 로직
+</info added on 2025-07-25T07:40:50.198Z>
+
+# Test Strategy:
+다양한 파일 타입 업로드 테스트, 파일 크기 제한 검증, 중복 파일 처리 테스트, 메타데이터 저장 확인, UUID 유일성 검증
+
+# Subtasks:
+## 1. 파일 검증 시스템 구현 [pending]
+### Dependencies: None
+### Description: 파일 확장자, MIME 타입, 파일 크기, 악성코드 검사 등 다단계 파일 검증 로직 구현
+### Details:
+file_extensions 테이블 기반 확장자 검증, MIME 타입과 확장자 일치성 검사, system_settings 테이블에서 동적 파일 크기 제한 로드, 파일 시그니처 검증, 이미지 파일의 경우 실제 이미지 포맷 검증, 악성코드 스캔 API 연동 준비
+
+## 2. 파일 저장 및 중복 관리 시스템 [pending]
+### Dependencies: 6.1
+### Description: UUID 기반 파일 저장, MD5 해시를 통한 중복 검사, 계층적 디렉토리 구조 생성
+### Details:
+UUID v4 생성 및 stored_filename 포맷 적용, 파일 내용 기반 MD5 해시 계산, 중복 파일 검사 및 기존 파일 참조 반환, 계층적 디렉토리 구조(/data/files/{uuid[:2]}/{uuid[2:4]}/) 생성, 파일 시스템 쓰기 권한 검증, 디스크 용량 체크
+
+## 3. 메타데이터 저장 및 관계 설정 [pending]
+### Dependencies: 6.2
+### Description: files, file_uploads, file_tags 테이블에 메타데이터 저장 및 관계 설정
+### Details:
+files 테이블에 파일 정보 저장 (original_filename, stored_filename, mime_type 등), file_uploads 테이블에 업로드 기록 (IP, user-agent, 타임스탬프), 카테고리 연결 (category_id), 태그 시스템 구현 (file_tags, file_tag_relations), 공개/비공개 설정, 설명 필드 저장
+
+## 4. 업로드 에러 처리 및 복구 시스템 [pending]
+### Dependencies: 6.3
+### Description: 업로드 과정의 다양한 에러 상황 처리 및 트랜잭션 관리
+### Details:
+데이터베이스 트랜잭션 관리 (실패 시 전체 롤백), 파일 저장 실패 시 임시 파일 정리, 네트워크 중단 감지 및 부분 업로드 처리, HTTP 상태 코드별 상세 에러 메시지, 업로드 실패 로그 기록 (file_uploads.upload_status = 'failed'), 재시도 가능한 에러와 영구 에러 구분
+
+## 5. 업로드 API 응답 및 모니터링 통합 [pending]
+### Dependencies: 6.4
+### Description: 표준화된 API 응답 형식 구현 및 업로드 성능 모니터링
+### Details:
+성공/실패 응답 JSON 포맷 표준화, 업로드된 파일의 view_url, download_url 생성, 업로드 처리 시간 측정 및 로깅, Rate limiting 구현 (IP별 업로드 제한), 업로드 통계 수집 (일별/시간별), Prometheus 메트릭 노출 (업로드 수, 실패율, 평균 파일 크기)
+
+## 6. IP 기반 암호화 키 인증 시스템 구현 [pending]
+### Dependencies: None
+### Description: 발신지 IP 주소와 해당 IP에 부여된 암호화 키로 인증 없이 파일을 업로드하는 시스템 구현
+### Details:
+IP 기반 인증 시스템 구현:
+
+1. **IP 허용 목록 관리 시스템**
+   - `allowed_ips` 테이블 생성 (IP 주소, 암호화 키, 권한 레벨, 만료일)
+   - IP 주소 범위 지원 (CIDR 표기법: 192.168.1.0/24)
+   - 암호화 키 생성 및 관리 (AES-256 기반)
+   - IP별 업로드 권한 및 제한 설정
+
+2. **암호화 키 검증 시스템**
+   - 요청 헤더에서 암호화 키 추출 (X-API-Key 또는 Authorization)
+   - IP 주소와 암호화 키 매칭 검증
+   - 키 만료일 확인 및 자동 만료 처리
+   - 키 사용 횟수 제한 및 모니터링
+
+3. **보안 강화 기능**
+   - IP 화이트리스트/블랙리스트 관리
+   - 요청 시그니처 검증 (HMAC-SHA256)
+   - Rate limiting (IP별, 키별)
+   - 의심스러운 활동 감지 및 로깅
+
+4. **API 엔드포인트 구현**
+   ```python
+   @app.post("/api/v1/files/upload/ip-auth")
+   async def upload_file_with_ip_auth(
+       file: UploadFile,
+       request: Request,
+       api_key: str = Header(..., alias="X-API-Key")
+   ):
+       # 1. IP 주소 추출
+       client_ip = get_client_ip(request)
+       
+       # 2. IP 및 키 검증
+       ip_auth = verify_ip_and_key(client_ip, api_key)
+       if not ip_auth:
+           raise HTTPException(401, "인증 실패: IP 또는 키가 유효하지 않습니다")
+       
+       # 3. 권한 확인
+       if not ip_auth.can_upload:
+           raise HTTPException(403, "업로드 권한이 없습니다")
+       
+       # 4. Rate limiting 확인
+       if is_rate_limited(client_ip, api_key):
+           raise HTTPException(429, "요청 한도를 초과했습니다")
+       
+       # 5. 기존 파일 업로드 로직 실행
+       return await upload_file_internal(file, client_ip, ip_auth)
+   ```
+
+5. **관리 API 구현**
+   - IP 허용 목록 추가/삭제/수정
+   - 암호화 키 재생성
+   - IP별 사용 통계 조회
+   - 보안 이벤트 로그 조회
+
+6. **데이터베이스 스키마**
+   ```sql
+   CREATE TABLE allowed_ips (
+       id INT PRIMARY KEY AUTO_INCREMENT,
+       ip_address VARCHAR(45) NOT NULL,  -- IPv6 지원
+       ip_range VARCHAR(18),             -- CIDR 표기법
+       encryption_key VARCHAR(255) NOT NULL,
+       key_hash VARCHAR(255) NOT NULL,   -- 키 해시 저장
+       permissions JSON,                 -- 권한 설정
+       max_uploads_per_hour INT DEFAULT 100,
+       max_file_size BIGINT DEFAULT 104857600,  -- 100MB
+       is_active BOOLEAN DEFAULT TRUE,
+       expires_at TIMESTAMP NULL,
+       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+       UNIQUE KEY unique_ip_key (ip_address, encryption_key)
+   );
+   
+   CREATE TABLE ip_auth_logs (
+       id INT PRIMARY KEY AUTO_INCREMENT,
+       ip_address VARCHAR(45) NOT NULL,
+       api_key_hash VARCHAR(255),
+       action VARCHAR(50) NOT NULL,      -- upload, auth_failed, rate_limited
+       file_uuid VARCHAR(36),
+       user_agent TEXT,
+       request_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+       response_code INT,
+       error_message TEXT
+   );
+   ```
+
+7. **보안 고려사항**
+   - 암호화 키는 해시로만 저장 (원본 키는 메모리에서만 사용)
+   - IP 스푸핑 방지 (X-Forwarded-For 헤더 검증)
+   - 키 노출 시 즉시 무효화 기능
+   - 정기적인 키 순환 정책
+

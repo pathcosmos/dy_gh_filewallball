@@ -1,0 +1,54 @@
+# Task ID: 9
+# Title: Docker 컨테이너화 및 Kubernetes 배포
+# Status: pending
+# Dependencies: 8
+# Priority: high
+# Description: Dockerfile 작성, 컨테이너 이미지 빌드, Kubernetes 매니페스트 작성
+# Details:
+Dockerfile:
+```dockerfile
+FROM python:3.11-slim
+
+WORKDIR /app
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY app/ ./app/
+
+EXPOSE 8000
+
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+```
+
+Kubernetes Deployment:
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: filewallball-api
+  namespace: filewallball
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: filewallball-api
+  template:
+    spec:
+      containers:
+      - name: api
+        image: filewallball-api:latest
+        ports:
+        - containerPort: 8000
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 200m
+            memory: 256Mi
+```
+Service, Ingress 설정
+
+# Test Strategy:
+컨테이너 빌드 및 실행 테스트, Kubernetes 배포 검증, 서비스 디스커버리 테스트, 리소스 제한 확인

@@ -1,0 +1,45 @@
+# Task ID: 12
+# Title: 고급 파일 관리 기능 및 보안 강화
+# Status: pending
+# Dependencies: 11
+# Priority: medium
+# Description: 파일 목록 조회, 페이지네이션, 파일 삭제, CORS 설정, 보안 헤더
+# Details:
+파일 목록 API:
+```python
+@router.get("/files")
+async def list_files(page: int = 1, size: int = 20, category: str = None):
+    offset = (page - 1) * size
+    query = db.query(FileInfo).filter(FileInfo.is_deleted == False)
+    
+    if category:
+        query = query.join(FileCategory).filter(FileCategory.name == category)
+    
+    files = query.offset(offset).limit(size).all()
+    total = query.count()
+    
+    return {
+        "files": [file.dict() for file in files],
+        "pagination": {
+            "page": page,
+            "size": size,
+            "total": total,
+            "pages": math.ceil(total / size)
+        }
+    }
+```
+
+소프트 삭제 구현:
+```python
+@router.delete("/files/{file_uuid}")
+async def delete_file(file_uuid: str):
+    file_info = await db.query(FileInfo).filter(FileInfo.file_uuid == file_uuid).first()
+    file_info.is_deleted = True
+    file_info.updated_at = datetime.utcnow()
+    await db.commit()
+```
+
+CORS 및 보안 헤더 설정, 파일 타입 검증 강화, 업로드 제한 정책
+
+# Test Strategy:
+페이지네이션 동작 확인, 파일 삭제 후 접근 차단 테스트, CORS 정책 검증, 보안 헤더 확인, 파일 타입 검증 우회 시도 테스트

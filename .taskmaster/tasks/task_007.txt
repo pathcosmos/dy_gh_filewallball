@@ -1,0 +1,33 @@
+# Task ID: 7
+# Title: Redis 캐싱 서비스 통합
+# Status: pending
+# Dependencies: 6
+# Priority: medium
+# Description: Redis 연결 관리, 캐싱 로직 구현, 캐시 무효화 정책
+# Details:
+Redis 캐싱 서비스:
+```python
+class CacheService:
+    def __init__(self):
+        self.redis = redis.Redis(
+            host='redis-service',
+            port=6379,
+            decode_responses=True,
+            connection_pool=redis.ConnectionPool(max_connections=20)
+        )
+    
+    async def get_file_info(self, file_uuid: str):
+        cache_key = f"file:{file_uuid}"
+        cached_data = self.redis.get(cache_key)
+        if cached_data:
+            return json.loads(cached_data)
+        return None
+    
+    async def set_file_info(self, file_uuid: str, file_info: dict, ttl: int = 3600):
+        cache_key = f"file:{file_uuid}"
+        self.redis.setex(cache_key, ttl, json.dumps(file_info))
+```
+캐시 히트율 모니터링, 캐시 워밍 전략, 장애 복구
+
+# Test Strategy:
+캐시 저장/조회 성능 테스트, TTL 만료 검증, Redis 연결 장애 시 fallback 테스트, 캐시 히트율 측정

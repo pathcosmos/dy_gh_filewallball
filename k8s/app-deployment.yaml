@@ -6,7 +6,7 @@ metadata:
   labels:
     app: filewallball
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: filewallball
@@ -17,33 +17,38 @@ spec:
     spec:
       containers:
       - name: filewallball
-        image: filewallball:latest
-        imagePullPolicy: Never
+        image: filewallball-api:latest
+        imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8000
         env:
-        - name: BASE_URL
-          valueFrom:
-            configMapKeyRef:
-              name: filewallball-config
-              key: BASE_URL
+        - name: DB_HOST
+          value: "mariadb-service"
+        - name: DB_PORT
+          value: "3306"
+        - name: DB_NAME
+          value: "filewallball_db"
+        - name: DB_USER
+          value: "filewallball_user"
+        - name: DB_PASSWORD
+          value: "filewallball_user_pass"
         - name: REDIS_HOST
-          valueFrom:
-            configMapKeyRef:
-              name: filewallball-config
-              key: REDIS_HOST
+          value: "redis-master"
         - name: REDIS_PORT
-          valueFrom:
-            configMapKeyRef:
-              name: filewallball-config
-              key: REDIS_PORT
+          value: "6379"
+        - name: REDIS_PASSWORD
+          value: "filewallball2024"
+        - name: DEBUG
+          value: "true"
+        - name: LOG_LEVEL
+          value: "DEBUG"
         resources:
           requests:
-            memory: "128Mi"
-            cpu: "100m"
-          limits:
             memory: "256Mi"
             cpu: "200m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
         livenessProbe:
           httpGet:
             path: /health
