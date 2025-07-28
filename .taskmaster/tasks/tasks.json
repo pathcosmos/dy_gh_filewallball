@@ -147,7 +147,7 @@
         "dependencies": [
           1
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -221,8 +221,65 @@
           2,
           3
         ],
-        "status": "pending",
-        "subtasks": []
+        "status": "done",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "FastAPI 프로젝트 초기 구조 생성 및 main.py 구현",
+            "description": "FastAPI 애플리케이션의 기본 디렉토리 구조를 생성하고 main.py 파일에 FastAPI 인스턴스 초기화 및 기본 설정 구현",
+            "dependencies": [],
+            "details": "프로젝트 디렉토리 구조 생성 (app/, models/, routers/, services/), main.py에 FastAPI 인스턴스 생성, 기본 라우터 등록, 애플리케이션 시작점 구현, lifespan 이벤트 핸들러 설정",
+            "status": "done",
+            "testStrategy": "uvicorn으로 서버 시작 확인, http://localhost:8000/docs 접속하여 Swagger UI 표시 확인, 기본 라우트 응답 테스트"
+          },
+          {
+            "id": 2,
+            "title": "환경 설정 관리 시스템 구현",
+            "description": "config.py 파일 구현 및 환경 변수 기반 설정 관리 시스템 구축",
+            "dependencies": [
+              "4.1"
+            ],
+            "details": "pydantic BaseSettings를 활용한 config.py 구현, .env 파일 지원, 데이터베이스 연결 정보(MariaDB, Redis), 파일 저장 경로, 업로드 제한 설정, 로깅 레벨 설정, CORS 허용 도메인 설정 등 환경 변수 관리",
+            "status": "done",
+            "testStrategy": "환경 변수 로드 테스트, 기본값 적용 확인, 잘못된 환경 변수 값에 대한 검증 테스트"
+          },
+          {
+            "id": 3,
+            "title": "미들웨어 및 로깅 시스템 설정",
+            "description": "CORS 미들웨어 구성, 구조화된 로깅 시스템 구현, 요청/응답 로깅 미들웨어 추가",
+            "dependencies": [
+              "4.1",
+              "4.2"
+            ],
+            "details": "FastAPI CORSMiddleware 설정, Python logging 모듈을 활용한 로거 구성, 요청 ID 추가 미들웨어, 응답 시간 측정 미들웨어, 로그 포맷터 설정 (JSON 형식 지원), 로그 레벨별 파일 분리 저장",
+            "status": "done",
+            "testStrategy": "CORS 헤더 검증, 다양한 Origin에서의 요청 테스트, 로그 파일 생성 확인, 로그 레벨별 필터링 동작 확인"
+          },
+          {
+            "id": 4,
+            "title": "의존성 주입 시스템 및 공통 의존성 구현",
+            "description": "FastAPI의 의존성 주입 시스템을 활용한 공통 의존성 함수 구현 및 전역 의존성 설정",
+            "dependencies": [
+              "4.2",
+              "4.3"
+            ],
+            "details": "데이터베이스 세션 의존성 함수 구현, Redis 연결 의존성, 인증/인가 의존성 준비, 파일 업로드 크기 제한 의존성, 요청 검증 의존성, 에러 핸들러 등록",
+            "status": "done",
+            "testStrategy": "의존성 주입 동작 확인, 데이터베이스 세션 생성/종료 테스트, 의존성 오류 시 적절한 에러 응답 확인"
+          },
+          {
+            "id": 5,
+            "title": "Health Check 엔드포인트 및 기본 라우터 구현",
+            "description": "애플리케이션 상태 확인을 위한 health check 엔드포인트 구현 및 기본 라우터 설정",
+            "dependencies": [
+              "4.1",
+              "4.4"
+            ],
+            "details": "health.py 라우터 구현 (/health, /ready 엔드포인트), 데이터베이스 연결 상태 확인, Redis 연결 상태 확인, 파일 시스템 접근 권한 확인, 버전 정보 반환, 라우터 prefix 및 태그 설정",
+            "status": "done",
+            "testStrategy": "각 health check 엔드포인트 응답 확인, 데이터베이스/Redis 연결 실패 시 적절한 상태 코드 반환 확인, Kubernetes readiness/liveness probe 호환성 테스트"
+          }
+        ]
       },
       {
         "id": 5,
@@ -331,7 +388,7 @@
     ],
     "metadata": {
       "created": "2025-07-25T06:00:18.242Z",
-      "updated": "2025-07-25T09:42:38.884Z",
+      "updated": "2025-07-28T01:24:43.577Z",
       "description": "Tasks for master context"
     }
   }
