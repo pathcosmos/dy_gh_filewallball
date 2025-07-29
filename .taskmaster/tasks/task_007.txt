@@ -31,3 +31,35 @@ class CacheService:
 
 # Test Strategy:
 캐시 저장/조회 성능 테스트, TTL 만료 검증, Redis 연결 장애 시 fallback 테스트, 캐시 히트율 측정
+
+# Subtasks:
+## 1. Redis 연결 풀 및 클러스터 구성 [in-progress]
+### Dependencies: None
+### Description: Redis 연결 풀 최적화, 클러스터 모드 설정, 연결 재시도 로직 구현
+### Details:
+ConnectionPool 설정 최적화 (max_connections, socket_timeout, socket_keepalive), Redis Sentinel 또는 클러스터 모드 구성, 연결 실패 시 exponential backoff 재시도 로직, 연결 상태 모니터링 및 자동 재연결 기능 구현
+
+## 2. 캐싱 전략 및 TTL 정책 구현 [pending]
+### Dependencies: 7.1
+### Description: 파일 정보별 TTL 정책 수립, 캐시 워밍 전략, LRU 정책 적용
+### Details:
+파일 크기와 접근 빈도에 따른 동적 TTL 설정, 인기 파일 사전 캐싱(cache warming) 구현, Redis maxmemory-policy를 allkeys-lru로 설정, 캐시 키 네이밍 규칙 정립 (file:info:{uuid}, file:meta:{uuid})
+
+## 3. 캐시 무효화 및 동기화 메커니즘 [pending]
+### Dependencies: 7.2
+### Description: 파일 업데이트/삭제 시 캐시 무효화, 분산 환경 캐시 동기화
+### Details:
+파일 메타데이터 변경 시 즉시 캐시 무효화, Redis Pub/Sub을 활용한 캐시 무효화 이벤트 전파, 캐시 태그 기반 그룹 무효화 구현, 트랜잭션 롤백 시 캐시 복구 메커니즘
+
+## 4. 캐시 성능 모니터링 및 메트릭 수집 [pending]
+### Dependencies: 7.3
+### Description: 캐시 히트율 추적, 응답 시간 측정, Prometheus 메트릭 노출
+### Details:
+캐시 히트/미스 카운터 구현, 캐시 조회 응답 시간 히스토그램, 캐시 메모리 사용량 추적, Grafana 대시보드용 메트릭 엔드포인트 (/metrics) 구현, 캐시 효율성 리포트 생성
+
+## 5. 장애 복구 및 폴백 전략 구현 [pending]
+### Dependencies: 7.4
+### Description: Redis 장애 시 폴백 메커니즘, 캐시 복구 프로세스, 서킷 브레이커 패턴
+### Details:
+Redis 연결 실패 시 데이터베이스 직접 조회 폴백, 서킷 브레이커 패턴으로 Redis 상태 모니터링, 캐시 복구 시 점진적 로드 전략, 장애 알림 및 자동 복구 스크립트, 캐시 데이터 백업 및 복원 메커니즘
+

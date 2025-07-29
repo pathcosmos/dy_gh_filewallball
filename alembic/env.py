@@ -35,6 +35,12 @@ target_metadata = Base.metadata
 
 def get_database_url():
     """환경 변수에서 데이터베이스 URL 가져오기"""
+    # 로컬 개발 환경에서는 SQLite 사용
+    if os.getenv('ENVIRONMENT', 'development') == 'development':
+        db_name = os.getenv('DB_NAME', 'filewallball.db')
+        return f"sqlite:///./{db_name}"
+    
+    # 프로덕션 환경에서는 MariaDB 사용
     db_host = os.getenv('DB_HOST', 'mariadb-service')
     db_port = os.getenv('DB_PORT', '3306')
     db_name = os.getenv('DB_NAME', 'filewallball_db')
@@ -57,16 +63,26 @@ def run_migrations_offline() -> None:
 
     """
     url = get_database_url()
-    context.configure(
-        url=url,
-        target_metadata=target_metadata,
-        literal_binds=True,
-        dialect_opts={"paramstyle": "named"},
-        # MariaDB 특화 설정
-        compare_type=True,
-        compare_server_default=True,
-        include_schemas=False,
-    )
+    
+    # SQLite와 MariaDB에 따른 설정 분기
+    if url.startswith('sqlite'):
+        context.configure(
+            url=url,
+            target_metadata=target_metadata,
+            literal_binds=True,
+            dialect_opts={"paramstyle": "named"},
+        )
+    else:
+        context.configure(
+            url=url,
+            target_metadata=target_metadata,
+            literal_binds=True,
+            dialect_opts={"paramstyle": "named"},
+            # MariaDB 특화 설정
+            compare_type=True,
+            compare_server_default=True,
+            include_schemas=False,
+        )
 
     with context.begin_transaction():
         context.run_migrations()
@@ -85,27 +101,42 @@ def run_migrations_online() -> None:
     # 설정에 URL 추가
     config.set_main_option("sqlalchemy.url", url)
     
-    connectable = engine_from_config(
-        config.get_section(config.config_ini_section, {}),
-        prefix="sqlalchemy.",
-        poolclass=pool.NullPool,
-        # MariaDB 특화 설정
-        connect_args={
-            "charset": "utf8mb4",
-            "autocommit": False,
-            "sql_mode": "STRICT_TRANS_TABLES,NO_ZERO_DATE,NO_ZERO_IN_DATE,ERROR_FOR_DIVISION_BY_ZERO"
-        }
-    )
+    # SQLite와 MariaDB에 따른 설정 분기
+    if url.startswith('sqlite'):
+        connectable = engine_from_config(
+            config.get_section(config.config_ini_section, {}),
+            prefix="sqlalchemy.",
+            poolclass=pool.NullPool,
+        )
+    else:
+        connectable = engine_from_config(
+            config.get_section(config.config_ini_section, {}),
+            prefix="sqlalchemy.",
+            poolclass=pool.NullPool,
+            # MariaDB 특화 설정
+            connect_args={
+                "charset": "utf8mb4",
+                "autocommit": False,
+                "sql_mode": "STRICT_TRANS_TABLES,NO_ZERO_DATE,NO_ZERO_IN_DATE,ERROR_FOR_DIVISION_BY_ZERO"
+            }
+        )
 
     with connectable.connect() as connection:
-        context.configure(
-            connection=connection, 
-            target_metadata=target_metadata,
-            # MariaDB 특화 설정
-            compare_type=True,
-            compare_server_default=True,
-            include_schemas=False,
-        )
+        # SQLite와 MariaDB에 따른 설정 분기
+        if url.startswith('sqlite'):
+            context.configure(
+                connection=connection,
+                target_metadata=target_metadata,
+            )
+        else:
+            context.configure(
+                connection=connection,
+                target_metadata=target_metadata,
+                # MariaDB 특화 설정
+                compare_type=True,
+                compare_server_default=True,
+                include_schemas=False,
+            )
 
         with context.begin_transaction():
             context.run_migrations()

@@ -19,7 +19,7 @@ from app.utils.security_utils import generate_encryption_key, sanitize_ip_addres
 router = APIRouter(prefix="/api/v1/ip-auth", tags=["IP Authentication"])
 
 
-@router.post("/upload", response_model=FileUploadResponse)
+@router.post("/upload", response_model=IPAuthResponse)
 async def upload_file_with_ip_auth(
     file: UploadFile = File(...),
     request: Request = None,
@@ -96,21 +96,23 @@ async def upload_file_with_ip_auth(
         # 성공 로그 기록
         ip_auth_service.log_auth_event(
             client_ip, x_api_key, "upload",
-            file_uuid=file_info.file_uuid,
+            file_uuid=file_info['file_uuid'],
             user_agent=request.headers.get("User-Agent"),
             response_code=200,
             request_size=file.size,
             processing_time_ms=processing_time_ms
         )
         
-        return FileUploadResponse(
+        return IPAuthResponse(
             success=True,
-            file_uuid=file_info.file_uuid,
-            original_filename=file_info.original_filename,
-            file_size=file_info.file_size,
+            file_uuid=file_info['file_uuid'],
+            original_filename=file.filename,  # 원본 파일명 사용
+            file_size=file_info['file_size'],
             message="파일이 성공적으로 업로드되었습니다",
             upload_time=datetime.utcnow().isoformat(),
-            processing_time_ms=processing_time_ms
+            processing_time_ms=processing_time_ms,
+            auth_method="ip_based",
+            client_ip=client_ip
         )
         
     except HTTPException:
