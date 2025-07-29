@@ -202,3 +202,47 @@ if not cached_info:
 
 # Test Strategy:
 다양한 파일 타입 다운로드 테스트, 스트리밍 성능 검증, 조회 기록 저장 확인, 미리보기 기능 테스트, 동시 다운로드 처리
+
+# Subtasks:
+## 1. 파일 정보 조회 및 다운로드 API 리팩토링 [pending]
+### Dependencies: None
+### Description: 새로운 DB 스키마에 맞춰 `/api/v1/files/{file_uuid}` (정보 조회) 및 `/api/v1/files/{file_uuid}/download` (다운로드) API를 구현합니다. 파일 조회 시 `FileView` 기록을, 다운로드 시 `FileDownload` 및 `FileView` 기록을 저장하는 로직을 포함합니다.
+### Details:
+`get_file_info`에서 `FileStatistics` 뷰를 조회하여 통계 정보를 함께 반환합니다. `download_file`은 스트리밍 응답을 사용하고 `Content-Disposition` 헤더를 설정하여 파일 다운로드를 처리합니다.
+
+## 2. 파일 목록 조회 및 필터링 API 구현 [pending]
+### Dependencies: None
+### Description: 페이지네이션을 지원하는 파일 목록 조회 API (`/api/v1/files`)를 구현합니다. 공개 여부, 카테고리, 태그를 기준으로 파일을 필터링하는 기능을 포함합니다.
+### Details:
+`page`와 `size` 쿼리 파라미터를 사용하여 페이지네이션을 처리합니다. `category_id`와 `tags` 파라미터를 이용해 각각 `file_categories` 및 `file_tags` 테이블과 조인하여 필터링을 수행합니다. 복합 인덱스를 활용하여 쿼리 성능을 최적화합니다.
+
+## 3. 파일 검색 기능 API 구현 [pending]
+### Dependencies: None
+### Description: 파일명과 설명을 기반으로 파일을 검색하는 API (`/api/v1/files/search`)를 구현합니다. 파일 확장자 및 생성일자 범위로 추가 필터링하는 기능을 제공합니다.
+### Details:
+`query` 파라미터로 `original_filename`과 `description` 필드에 대해 `contains` 검색을 수행합니다. `file_type`, `date_from`, `date_to` 파라미터를 사용하여 검색 결과를 세분화합니다. 페이지네이션을 적용합니다.
+
+## 4. Redis 캐싱을 통한 조회 성능 최적화 [pending]
+### Dependencies: 8.1
+### Description: 파일 정보 조회 API의 응답 속도를 개선하기 위해 Redis 캐싱을 도입합니다. 자주 조회되는 파일 정보를 캐시에 저장하여 DB 부하를 줄입니다.
+### Details:
+`get_file_info` API에서 파일 정보를 조회하기 전, 먼저 Redis에서 `file_info:{file_uuid}` 키로 캐시된 데이터가 있는지 확인합니다. 캐시가 없을 경우 DB에서 조회한 후, 결과를 JSON 형태로 직렬화하여 Redis에 TTL(예: 3600초)과 함께 저장합니다.
+
+## 5. 조회/다운로드 통계 집계 뷰 생성 및 연동 [pending]
+### Dependencies: 8.1
+### Description: 파일별 총 조회수, 다운로드 수 등의 통계 정보를 효율적으로 관리하기 위해 데이터베이스에 `file_statistics` 뷰(View)를 생성하고, 파일 정보 조회 API와 연동합니다.
+### Details:
+`file_views`와 `file_downloads` 테이블의 데이터를 집계하여 파일 UUID별 통계를 제공하는 `file_statistics` SQL 뷰를 정의합니다. `get_file_info` API에서 이 뷰를 조회하여 통계 정보를 응답에 포함시킵니다.
+
+## 6. 이미지 파일 웹 스트리밍 API 구현 [pending]
+### Dependencies: 8.1
+### Description: 이미지 파일들을 웹에서 직접 볼 수 있도록 스트리밍 엔드포인트를 구현합니다. 이미지 확장자별로 적절한 Content-Type을 설정하여 브라우저에서 바로 표시되도록 합니다.
+### Details:
+이미지 파일 전용 스트리밍 API (`/api/v1/files/{file_uuid}/preview`)를 구현합니다. 지원하는 이미지 확장자: jpg, jpeg, png, gif, webp, bmp, svg, ico, tiff, tif 등. 파일 확장자를 확인하여 적절한 MIME 타입을 설정하고, 브라우저에서 이미지가 바로 표시되도록 Content-Type 헤더를 설정합니다. 다운로드가 아닌 웹 표시용이므로 Content-Disposition 헤더는 설정하지 않습니다. 이미지 조회 시 FileView 기록을 저장합니다.
+
+## 7. 이미지 썸네일 생성 및 제공 API 구현 [pending]
+### Dependencies: 8.6
+### Description: 이미지 파일들의 작은 썸네일을 생성하고 제공하는 API를 구현합니다. 다양한 크기의 썸네일을 생성하여 목록 표시나 미리보기에 활용할 수 있도록 합니다.
+### Details:
+썸네일 생성 및 제공 API (`/api/v1/files/{file_uuid}/thumbnail`)를 구현합니다. Pillow 라이브러리를 사용하여 원본 이미지에서 썸네일을 생성합니다. 지원하는 썸네일 크기: small(150x150), medium(300x300), large(500x500). 썸네일은 비율을 유지하면서 리사이즈하고, 생성된 썸네일은 별도 스토리지에 저장하여 재사용합니다. 썸네일 생성 시 FileView 기록을 저장하고, 썸네일 조회 시에도 별도 기록을 남깁니다. 썸네일이 없는 경우 실시간으로 생성하여 제공합니다.
+

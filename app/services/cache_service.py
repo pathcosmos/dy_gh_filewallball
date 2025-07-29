@@ -1,23 +1,137 @@
 """
 캐시 서비스 모듈
 Redis 연결 관리자와 통합된 고급 캐싱 기능을 제공합니다.
+Task 7.2: 캐싱 전략 및 TTL 정책 구현
 """
 
 import json
 import logging
-from typing import Optional, Any, Dict, List, Union
-from datetime import datetime, timedelta
+from typing import Optional, Any, Dict, List
+from datetime import datetime
 from app.services.redis_connection_manager import get_redis_manager
 
 logger = logging.getLogger(__name__)
 
 
 class CacheService:
-    """Redis 캐시 서비스 클래스"""
+    """Redis 캐시 서비스 클래스 - Task 7.2 캐싱 전략 및 TTL 정책 구현"""
     
     def __init__(self):
         self.redis_manager = get_redis_manager()
         self.client = self.redis_manager.get_client()
+        
+        # Task 7.2: 동적 TTL 정책 설정
+        self.ttl_policies = {
+            'file_info': {
+                'base_ttl': 3600,  # 기본 1시간
+                'size_multiplier': 0.1,  # 파일 크기당 TTL 증가 (MB당 0.1초)
+                'access_boost': 300,  # 접근 시 TTL 증가 (5분)
+                'max_ttl': 86400  # 최대 24시간
+            },
+            'file_meta': {
+                'base_ttl': 1800,  # 기본 30분
+                'size_multiplier': 0.05,
+                'access_boost': 150,
+                'max_ttl': 7200
+            },
+            'file_stats': {
+                'base_ttl': 600,  # 기본 10분
+                'size_multiplier': 0.02,
+                'access_boost': 60,
+                'max_ttl': 3600
+            }
+        }
+        
+        # Task 7.2: 캐시 워밍 설정
+        self.cache_warming = {
+            'enabled': True,
+            'popular_files_threshold': 10,  # 인기 파일 판단 기준 (접근 횟수)
+            'warming_ttl': 7200,  # 캐시 워밍 TTL (2시간)
+            'max_warming_files': 100  # 최대 워밍 파일 수
+        }
+        
+        # Task 7.2: LRU 정책 설정
+        self.lru_config = {
+            'maxmemory_policy': 'allkeys-lru',
+            'maxmemory': '2gb',  # 최대 메모리 사용량
+            'maxmemory_samples': 5  # LRU 샘플링 수
+        }
+    
+    def _calculate_dynamic_ttl(self, cache_type: str, file_size_mb: float = 0, 
+                              access_count: int = 0) -> int:
+        """
+        Task 7.2: 파일 크기와 접근 빈도에 따른 동적 TTL 계산
+        
+        Args:
+            cache_type: 캐시 타입 (file_info, file_meta, file_stats)
+            file_size_mb: 파일 크기 (MB)
+            access_count: 접근 횟수
+            
+        Returns:
+            계산된 TTL (초)
+        """
+        policy = self.ttl_policies.get(cache_type, self.ttl_policies['file_info'])
+        
+        # 기본 TTL
+        ttl = policy['base_ttl']
+        
+        # 파일 크기에 따른 TTL 증가
+        size_boost = file_size_mb * policy['size_multiplier']
+        ttl += int(size_boost)
+        
+        # 접근 빈도에 따른 TTL 증가
+        access_boost = min(access_count * policy['access_boost'], 
+                          policy['max_ttl'] // 2)
+        ttl += access_boost
+        
+        # 최대 TTL 제한
+        ttl = min(ttl, policy['max_ttl'])
+        
+        return max(ttl, 60)  # 최소 1분
+    
+    async def _get_access_count(self, file_uuid: str) -> int:
+        """
+        파일 접근 횟수 조회
+        
+        Args:
+            file_uuid: 파일 UUID
+            
+        Returns:
+            접근 횟수
+        """
+        try:
+            access_key = f"file:access:{file_uuid}"
+            count = await self.redis_manager.execute_with_retry(
+                self.client.get, access_key
+            )
+            return int(count) if count else 0
+        except Exception as e:
+            logger.error(f"접근 횟수 조회 실패: {e}")
+            return 0
+    
+    async def _increment_access_count(self, file_uuid: str) -> int:
+        """
+        파일 접근 횟수 증가
+        
+        Args:
+            file_uuid: 파일 UUID
+            
+        Returns:
+            증가된 접근 횟수
+        """
+        try:
+            access_key = f"file:access:{file_uuid}"
+            count = await self.redis_manager.execute_with_retry(
+                self.client.incr, access_key
+            )
+            # 접근 횟수는 24시간 동안 유지
+            await self.redis_manager.execute_with_retry(
+                self.client.expire, access_key, 86400
+            )
+            return count
+        except Exception as e:
+            logger.error(f"접근 횟수 증가 실패: {e}")
+            return 0
     
     async def set(self, key: str, value: Any, expire: int = 3600) -> bool:
         """
@@ -200,9 +314,10 @@ class CacheService:
             logger.error(f"캐시 통계 조회 실패: {e}")
             return {}
     
+    # Task 7.2: 동적 TTL을 적용한 파일 정보 캐싱
     async def get_file_info(self, file_uuid: str) -> Optional[Dict[str, Any]]:
         """
-        파일 정보 캐시 조회
+        파일 정보 캐시 조회 (접근 횟수 증가 포함)
         
         Args:
             file_uuid: 파일 UUID
@@ -211,22 +326,135 @@ class CacheService:
             파일 정보 (캐시된 경우)
         """
         cache_key = f"file:info:{file_uuid}"
-        return await self.get(cache_key)
+        file_info = await self.get(cache_key)
+        
+        if file_info:
+            # 접근 횟수 증가
+            await self._increment_access_count(file_uuid)
+            
+            # 캐시 히트 시 TTL 연장 (접근 부스트 적용)
+            access_count = await self._get_access_count(file_uuid)
+            file_size_mb = file_info.get('file_size', 0) / (1024 * 1024)  # MB로 변환
+            new_ttl = self._calculate_dynamic_ttl('file_info', file_size_mb, 
+                                                access_count)
+            await self.expire(cache_key, new_ttl)
+            
+            logger.info(f"파일 정보 캐시 히트: {file_uuid}, TTL 연장: {new_ttl}초")
+        
+        return file_info
     
-    async def set_file_info(self, file_uuid: str, file_info: Dict[str, Any], ttl: int = 3600) -> bool:
+    async def set_file_info(self, file_uuid: str, file_info: Dict[str, Any], 
+                           ttl: int = None) -> bool:
         """
-        파일 정보 캐시 저장
+        파일 정보 캐시 저장 (동적 TTL 적용)
         
         Args:
             file_uuid: 파일 UUID
             file_info: 파일 정보
-            ttl: 만료 시간 (초)
+            ttl: 만료 시간 (초, None이면 동적 계산)
             
         Returns:
             저장 성공 여부
         """
         cache_key = f"file:info:{file_uuid}"
-        return await self.set(cache_key, file_info, ttl)
+        
+        # Task 7.2: 동적 TTL 계산
+        if ttl is None:
+            file_size_mb = file_info.get('file_size', 0) / (1024 * 1024)  # MB로 변환
+            access_count = await self._get_access_count(file_uuid)
+            ttl = self._calculate_dynamic_ttl('file_info', file_size_mb, 
+                                            access_count)
+        
+        success = await self.set(cache_key, file_info, ttl)
+        if success:
+            logger.info(f"파일 정보 캐시 저장: {file_uuid}, TTL: {ttl}초")
+        
+        return success
+    
+    # Task 7.2: 캐시 워밍 기능
+    async def warm_popular_files(self, file_list: List[Dict[str, Any]]) -> int:
+        """
+        인기 파일 사전 캐싱 (캐시 워밍)
+        
+        Args:
+            file_list: 파일 정보 목록
+            
+        Returns:
+            워밍된 파일 수
+        """
+        if not self.cache_warming['enabled']:
+            return 0
+        
+        warmed_count = 0
+        warming_ttl = self.cache_warming['warming_ttl']
+        
+        for file_info in file_list[:self.cache_warming['max_warming_files']]:
+            file_uuid = file_info.get('uuid')
+            access_count = await self._get_access_count(file_uuid)
+            
+            # 인기 파일 판단 (접근 횟수 기준)
+            if access_count >= self.cache_warming['popular_files_threshold']:
+                success = await self.set_file_info(file_uuid, file_info, warming_ttl)
+                if success:
+                    warmed_count += 1
+                    logger.info(f"캐시 워밍 완료: {file_uuid}")
+        
+        logger.info(f"캐시 워밍 완료: {warmed_count}개 파일")
+        return warmed_count
+    
+    # Task 7.2: LRU 정책 설정
+    async def configure_lru_policy(self) -> bool:
+        """
+        Redis LRU 정책 설정
+        
+        Returns:
+            설정 성공 여부
+        """
+        try:
+            # maxmemory-policy 설정
+            await self.redis_manager.execute_with_retry(
+                self.client.config_set, 'maxmemory-policy', 
+                self.lru_config['maxmemory_policy']
+            )
+            
+            # maxmemory 설정 (바이트 단위)
+            maxmemory_bytes = self._parse_memory_size(self.lru_config['maxmemory'])
+            await self.redis_manager.execute_with_retry(
+                self.client.config_set, 'maxmemory', str(maxmemory_bytes)
+            )
+            
+            # maxmemory-samples 설정
+            await self.redis_manager.execute_with_retry(
+                self.client.config_set, 'maxmemory-samples', 
+                str(self.lru_config['maxmemory_samples'])
+            )
+            
+            logger.info(f"LRU 정책 설정 완료: {self.lru_config['maxmemory_policy']}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"LRU 정책 설정 실패: {e}")
+            return False
+    
+    def _parse_memory_size(self, size_str: str) -> int:
+        """
+        메모리 크기 문자열을 바이트로 변환
+        
+        Args:
+            size_str: 메모리 크기 문자열 (예: "2gb", "512mb")
+            
+        Returns:
+            바이트 단위 크기
+        """
+        size_str = size_str.lower()
+        if size_str.endswith('gb'):
+            return int(float(size_str[:-2]) * 1024 * 1024 * 1024)
+        elif size_str.endswith('mb'):
+            return int(float(size_str[:-2]) * 1024 * 1024)
+        elif size_str.endswith('kb'):
+            return int(float(size_str[:-2]) * 1024)
+        else:
+            return int(size_str)
     
     async def invalidate_file_cache(self, file_uuid: str) -> bool:
         """
@@ -263,7 +491,8 @@ class CacheService:
         cache_key = f"upload:stats:{client_ip}"
         return await self.get(cache_key)
     
-    async def set_upload_stats(self, client_ip: str, stats: Dict[str, Any], ttl: int = 300) -> bool:
+    async def set_upload_stats(self, client_ip: str, stats: Dict[str, Any], 
+                              ttl: int = 300) -> bool:
         """
         업로드 통계 캐시 저장
         
@@ -278,7 +507,8 @@ class CacheService:
         cache_key = f"upload:stats:{client_ip}"
         return await self.set(cache_key, stats, ttl)
     
-    async def increment_counter(self, key: str, amount: int = 1, expire: int = 3600) -> Optional[int]:
+    async def increment_counter(self, key: str, amount: int = 1, 
+                               expire: int = 3600) -> Optional[int]:
         """
         카운터 증가 (Rate limiting용)
         

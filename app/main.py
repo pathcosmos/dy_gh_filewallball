@@ -10,12 +10,13 @@ from fastapi import (
     Request, Depends
 )
 from fastapi.responses import FileResponse, Response, JSONResponse
-from fastapi.middleware.cors import CORSMiddleware
+from app.middleware.security_headers import SecurityHeadersMiddleware, CORSValidationMiddleware
 from pydantic import BaseModel
 import redis
 from prometheus_client import (
     Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
 )
+from prometheus_fastapi_instrumentator import Instrumentator
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -26,10 +27,15 @@ from app.services.rate_limiter_service import RateLimiterService
 from app.models.orm_models import FileInfo
 from app.models.api_models import (
     FileUploadResponse, FileDuplicateResponse, FileInfoResponse,
-    UploadStatisticsResponse, ErrorResponse, HealthCheckResponse,
+    UploadStatisticsResponse, ErrorResponse,
     MetricsResponse, ErrorStatisticsResponse
 )
 from app.routers.ip_auth_router import router as ip_auth_router
+from app.routers.health import router as health_router
+from app.services.scheduler_service import scheduler_service
+from app.services.file_validation_service import file_validation_service
+from app.services.rbac_service import rbac_service
+from app.middleware.audit_middleware import AuditMiddleware
 
 # Redis 연결
 redis_client = redis.Redis(
@@ -41,19 +47,48 @@ redis_client = redis.Redis(
 
 app = FastAPI(title="File Management API", version="1.0.0")
 
-# CORS 설정
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# 보안 헤더 및 CORS 정책 설정
+app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(CORSValidationMiddleware)
 
 # 라우터 등록
 app.include_router(ip_auth_router)
+app.include_router(health_router)
 
-# 메트릭 설정
+# 전역 예외 처리 미들웨어
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    """전역 예외 처리 미들웨어 - 에러 메트릭 업데이트"""
+    # 에러 타입 분류
+    if isinstance(exc, HTTPException):
+        error_type = f"http_{exc.status_code}"
+    elif isinstance(exc, ValueError):
+        error_type = "validation_error"
+    elif isinstance(exc, ConnectionError):
+        error_type = "connection_error"
+    else:
+        error_type = "internal_error"
+    
+    # 에러 메트릭 업데이트
+    error_rate_counter.labels(error_type=error_type).inc()
+    
+    # 기본 에러 응답
+    if isinstance(exc, HTTPException):
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={"detail": exc.detail}
+        )
+    else:
+        return JSONResponse(
+            status_code=500,
+            content={"detail": "Internal server error"}
+        )
+
+# Prometheus Instrumentator 설정
+instrumentator = Instrumentator()
+instrumentator.instrument(app).expose(app)
+
+# 커스텀 메트릭 설정
 file_upload_counter = Counter(
     'file_uploads_total', 'Total number of file uploads'
 )
@@ -67,6 +102,23 @@ file_upload_error_counter = Counter(
     'file_upload_errors_total', 
     'Total number of file upload errors', 
     ['error_type']
+)
+
+# 추가 커스텀 메트릭
+active_connections_gauge = Counter(
+    'active_connections_total', 'Total number of active connections'
+)
+error_rate_counter = Counter(
+    'error_rate_total', 'Total number of errors', ['error_type']
+)
+file_processing_duration = Histogram(
+    'file_processing_duration_seconds', 'File processing duration'
+)
+cache_hit_counter = Counter(
+    'cache_hits_total', 'Total number of cache hits'
+)
+cache_miss_counter = Counter(
+    'cache_misses_total', 'Total number of cache misses'
 )
 
 # 파일 저장 디렉토리
@@ -229,11 +281,28 @@ async def upload_file_v2(
         # 3. 업로드 세션 시작
         rate_limiter.start_upload_session(client_ip)
         
-        # 4. 파일 검증
-        if not file.filename:
-            raise ValueError("파일명이 제공되지 않았습니다")
+        # 4. 파일 유효성 검사 (Task 12.4: 강화된 검증)
+        validation_result = await file_validation_service.validate_upload_file(file)
         
-        # 5. 파일 크기 제한 확인
+        if not validation_result['is_valid']:
+            # 검증 실패 시 에러 메트릭 업데이트
+            file_upload_error_counter.labels(error_type='validation_error').inc()
+            error_rate_counter.labels(error_type='validation_error').inc()
+            
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={
+                    "message": "파일 검증에 실패했습니다",
+                    "errors": validation_result['errors'],
+                    "file_info": {
+                        "filename": file.filename,
+                        "detected_mime_type": validation_result.get('mime_type'),
+                        "file_size": validation_result.get('file_size')
+                    }
+                }
+            )
+        
+        # 5. 파일 크기 제한 확인 (Rate Limiter)
         if not rate_limiter.check_file_size_limit(getattr(file, 'size', 0), client_ip):
             raise HTTPException(
                 status_code=413, 
@@ -437,18 +506,7 @@ async def view_file(file_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"View failed: {str(e)}")
 
-@app.get("/health")
-async def health_check():
-    """헬스체크 엔드포인트"""
-    try:
-        # Redis 연결 확인
-        redis_client.ping()
-        return {"status": "healthy", "timestamp": datetime.now().isoformat()}
-    except Exception as e:
-        return JSONResponse(
-            status_code=503,
-            content={"status": "unhealthy", "error": str(e), "timestamp": datetime.now().isoformat()}
-        )
+
 
 @app.get("/metrics")
 async def metrics():
@@ -553,34 +611,229 @@ async def get_detailed_metrics(db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail=f"메트릭 수집 실패: {str(e)}")
 
 
-@app.get("/health/detailed", response_model=HealthCheckResponse)
-async def detailed_health_check():
-    """상세 헬스체크"""
-    services = {}
+@app.get("/api/v1/security/headers-test")
+async def test_security_headers():
+    """
+    보안 헤더 테스트 API
+    Task 12.3: 보안 헤더 검증
     
-    # Redis 연결 확인
+    Returns:
+        보안 헤더가 적용된 응답
+    """
+    return {
+        "message": "Security headers test endpoint",
+        "status": "success",
+        "headers_applied": [
+            "X-Content-Type-Options: nosniff",
+            "X-Frame-Options: DENY", 
+            "X-XSS-Protection: 1; mode=block",
+            "Content-Security-Policy",
+            "Strict-Transport-Security",
+            "Referrer-Policy: strict-origin-when-cross-origin",
+            "Permissions-Policy",
+            "Cross-Origin-Embedder-Policy: require-corp",
+            "Cross-Origin-Opener-Policy: same-origin",
+            "Cross-Origin-Resource-Policy: same-origin"
+        ],
+        "cors_policy": {
+            "description": "Strict CORS policy applied",
+            "allowed_origins": [
+                "http://localhost:3000",
+                "http://localhost:8080", 
+                "https://filewallball.com",
+                "https://www.filewallball.com"
+            ],
+            "environment_origins": "Configurable via ALLOWED_ORIGINS env var"
+        }
+    }
+
+
+@app.get("/api/v1/validation/policy")
+async def get_validation_policy():
+    """
+    파일 업로드 검증 정책 조회 API
+    Task 12.4: 파일 유효성 검사 정책 정보
+    
+    Returns:
+        파일 업로드 검증 정책 정보
+    """
+    return {
+        "message": "File upload validation policy",
+        "status": "success",
+        "validation_policy": {
+            "file_size_limits": {
+                "min_size_bytes": file_validation_service.min_file_size,
+                "max_size_bytes": file_validation_service.max_file_size,
+                "min_size_mb": file_validation_service.min_file_size // (1024 * 1024),
+                "max_size_mb": file_validation_service.max_file_size // (1024 * 1024)
+            },
+            "allowed_extensions": file_validation_service.get_allowed_extensions(),
+            "blocked_extensions": file_validation_service.get_blocked_extensions(),
+            "allowed_mime_types": list(file_validation_service.allowed_mime_types.keys()),
+            "blocked_mime_types": list(file_validation_service.blocked_mime_types),
+            "filename_restrictions": {
+                "max_length": 255,
+                "forbidden_patterns": file_validation_service.forbidden_filename_patterns,
+                "forbidden_characters": ['<', '>', ':', '"', '|', '?', '*', '\\', '/']
+            },
+            "security_features": [
+                "Magic Number 기반 MIME 타입 검증",
+                "악성 코드 패턴 검사",
+                "실행 파일 차단",
+                "스크립트 파일 차단",
+                "파일명 보안 검증"
+            ]
+        }
+    }
+
+
+@app.get("/api/v1/audit/logs")
+async def get_audit_logs(
+    page: int = Query(1, ge=1, description="페이지 번호"),
+    size: int = Query(50, ge=1, le=200, description="페이지당 로그 수"),
+    user_id: Optional[int] = Query(None, description="사용자 ID로 필터링"),
+    action: Optional[str] = Query(None, description="액션으로 필터링 (create, read, update, delete)"),
+    resource_type: Optional[str] = Query(None, description="리소스 타입으로 필터링 (file, user, system)"),
+    status: Optional[str] = Query(None, description="상태로 필터링 (success, failed, denied)"),
+    date_from: Optional[datetime] = Query(None, description="시작 날짜"),
+    date_to: Optional[datetime] = Query(None, description="종료 날짜"),
+    ip_address: Optional[str] = Query(None, description="IP 주소로 필터링"),
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    """
+    감사 로그 조회 API
+    Task 12.5: RBAC 기반 감사 로그 조회
+    
+    Returns:
+        감사 로그 목록 및 페이지네이션 정보
+    """
     try:
-        redis_client.ping()
-        services['redis'] = 'healthy'
+        # 필터 구성
+        filters = {}
+        if user_id:
+            filters['user_id'] = user_id
+        if action:
+            filters['action'] = action
+        if resource_type:
+            filters['resource_type'] = resource_type
+        if status:
+            filters['status'] = status
+        if date_from:
+            filters['date_from'] = date_from
+        if date_to:
+            filters['date_to'] = date_to
+        if ip_address:
+            filters['ip_address'] = ip_address
+        
+        # RBAC 서비스를 통한 로그 조회
+        logs, total = rbac_service.get_audit_logs(
+            db=db,
+            user=current_user,
+            filters=filters,
+            page=page,
+            size=size
+        )
+        
+        # 로그 데이터 변환
+        log_data = []
+        for log in logs:
+            log_data.append({
+                "id": log.id,
+                "user_id": log.user_id,
+                "ip_address": log.ip_address,
+                "action": log.action,
+                "resource_type": log.resource_type,
+                "resource_id": log.resource_id,
+                "resource_name": log.resource_name,
+                "details": json.loads(log.details) if log.details else None,
+                "status": log.status,
+                "error_message": log.error_message,
+                "request_path": log.request_path,
+                "request_method": log.request_method,
+                "response_code": log.response_code,
+                "processing_time_ms": log.processing_time_ms,
+                "created_at": log.created_at.isoformat()
+            })
+        
+        return {
+            "message": "Audit logs retrieved successfully",
+            "status": "success",
+            "data": {
+                "logs": log_data,
+                "pagination": {
+                    "page": page,
+                    "size": size,
+                    "total": total,
+                    "pages": (total + size - 1) // size
+                },
+                "filters": filters
+            }
+        }
+        
+    except HTTPException:
+        raise
     except Exception as e:
-        services['redis'] = f'unhealthy: {str(e)}'
+        logger.error(f"Failed to retrieve audit logs: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="감사 로그 조회 중 오류가 발생했습니다"
+        )
+
+
+@app.get("/api/v1/rbac/permissions")
+async def get_user_permissions(
+    current_user = Depends(get_current_user)
+):
+    """
+    사용자 권한 조회 API
+    Task 12.5: RBAC 권한 정보 조회
     
-    # 파일 시스템 확인
+    Returns:
+        현재 사용자의 권한 정보
+    """
     try:
-        if UPLOAD_DIR.exists() and os.access(UPLOAD_DIR, os.W_OK):
-            services['file_system'] = 'healthy'
-        else:
-            services['file_system'] = 'unhealthy: 권한 없음'
+        permissions = rbac_service.get_user_permissions(current_user)
+        
+        return {
+            "message": "User permissions retrieved successfully",
+            "status": "success",
+            "data": {
+                "user_id": current_user.id,
+                "username": current_user.username,
+                "role": current_user.role,
+                "permissions": permissions,
+                "file_access_rules": rbac_service.file_access_rules
+            }
+        }
+        
     except Exception as e:
-        services['file_system'] = f'unhealthy: {str(e)}'
-    
-    # 전체 상태 결정
-    overall_status = 'healthy' if all(
-        status == 'healthy' for status in services.values()
-    ) else 'unhealthy'
-    
-    return HealthCheckResponse(
-        status=overall_status,
-        services=services,
-        version="1.0.0"
-    )
+        logger.error(f"Failed to retrieve user permissions: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="권한 정보 조회 중 오류가 발생했습니다"
+        )
+
+
+@app.on_event("startup")
+async def startup_event():
+    """애플리케이션 시작 시 실행되는 이벤트"""
+    try:
+        # 스케줄러 시작
+        await scheduler_service.start_scheduler()
+        print("✅ File cleanup scheduler started successfully")
+    except Exception as e:
+        print(f"❌ Failed to start scheduler: {e}")
+
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """애플리케이션 종료 시 실행되는 이벤트"""
+    try:
+        # 스케줄러 중지
+        await scheduler_service.stop_scheduler()
+        print("✅ File cleanup scheduler stopped successfully")
+    except Exception as e:
+        print(f"❌ Failed to stop scheduler: {e}")
+
+

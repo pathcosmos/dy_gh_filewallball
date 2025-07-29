@@ -30,6 +30,7 @@ class FileInfo(Base):
     file_hash: Mapped[Optional[str]] = mapped_column(String(64), index=True)
     storage_path: Mapped[str] = mapped_column(String(500), nullable=False)
     file_category_id: Mapped[Optional[int]] = mapped_column(SmallInteger, ForeignKey("file_categories.id"))
+    owner_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("users.id"), index=True)  # Task 12.5: 파일 소유자
     is_public: Mapped[bool] = mapped_column(Boolean, default=True)
     is_deleted: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
@@ -37,6 +38,7 @@ class FileInfo(Base):
     
     # 관계 정의
     category: Mapped[Optional["FileCategory"]] = relationship("FileCategory", back_populates="files")
+    owner: Mapped[Optional["User"]] = relationship("User", back_populates="owned_files")  # Task 12.5: 소유자 관계
     uploads: Mapped[List["FileUpload"]] = relationship("FileUpload", back_populates="file")
     tags: Mapped[List["FileTag"]] = relationship("FileTag", secondary="file_tag_relations", back_populates="files")
     
@@ -188,19 +190,53 @@ class SystemSetting(Base):
 
 
 class FileStatistics(Base):
-    """파일 통계 뷰 모델 (읽기 전용)"""
+    """파일별 상세 통계 뷰 모델 (Task 8.5)"""
     __tablename__ = "file_statistics"
     __table_args__ = {'info': {'is_view': True}}
     
-    category_id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    category_name: Mapped[str] = mapped_column(String(100))
-    file_count: Mapped[int] = mapped_column(Integer)
-    total_size: Mapped[int] = mapped_column(BigInteger)
-    avg_file_size: Mapped[float] = mapped_column(Float)
-    last_upload: Mapped[Optional[datetime]] = mapped_column(DateTime)
+    # 기본 파일 정보
+    file_uuid: Mapped[str] = mapped_column(String(36), primary_key=True)
+    file_id: Mapped[int] = mapped_column(BigInteger)
+    original_filename: Mapped[str] = mapped_column(String(255))
+    file_extension: Mapped[str] = mapped_column(String(20))
+    file_size: Mapped[int] = mapped_column(BigInteger)
+    is_public: Mapped[bool] = mapped_column(Boolean)
+    created_at: Mapped[datetime] = mapped_column(DateTime)
+    updated_at: Mapped[datetime] = mapped_column(DateTime)
+    
+    # 조회 통계
+    total_views: Mapped[int] = mapped_column(Integer, default=0)
+    unique_viewers: Mapped[int] = mapped_column(Integer, default=0)
+    last_viewed: Mapped[Optional[datetime]] = mapped_column(DateTime)
+    first_viewed: Mapped[Optional[datetime]] = mapped_column(DateTime)
+    
+    # 다운로드 통계
+    total_downloads: Mapped[int] = mapped_column(Integer, default=0)
+    unique_downloaders: Mapped[int] = mapped_column(Integer, default=0)
+    last_downloaded: Mapped[Optional[datetime]] = mapped_column(DateTime)
+    first_downloaded: Mapped[Optional[datetime]] = mapped_column(DateTime)
+    total_bytes_downloaded: Mapped[int] = mapped_column(BigInteger, default=0)
+    
+    # 계산된 통계
+    total_interactions: Mapped[int] = mapped_column(Integer, default=0)
+    popularity_score: Mapped[float] = mapped_column(Float, default=0.0)
+    avg_daily_views: Mapped[float] = mapped_column(Float, default=0.0)
+    engagement_rate: Mapped[float] = mapped_column(Float, default=0.0)
+    
+    # 최근 활동
+    recent_views: Mapped[int] = mapped_column(Integer, default=0)
+    recent_downloads: Mapped[int] = mapped_column(Integer, default=0)
+    
+    # 조회 타입별 통계
+    info_views: Mapped[int] = mapped_column(Integer, default=0)
+    preview_views: Mapped[int] = mapped_column(Integer, default=0)
+    thumbnail_views: Mapped[int] = mapped_column(Integer, default=0)
+    
+    # 메타데이터
+    statistics_updated_at: Mapped[datetime] = mapped_column(DateTime)
     
     def __repr__(self):
-        return f"<FileStatistics(category_id={self.category_id}, count={self.file_count})>"
+        return f"<FileStatistics(file_uuid={self.file_uuid}, views={self.total_views}, downloads={self.total_downloads})>"
 
 
 # 헬퍼 함수들
@@ -376,4 +412,55 @@ class IPRateLimit(Base):
     __table_args__ = (UniqueConstraint('ip_address', 'api_key_hash', 'window_start', name='unique_rate_limit'),)
     
     def __repr__(self):
-        return f"<IPRateLimit(id={self.id}, ip='{self.ip_address}', count={self.request_count})>" 
+        return f"<IPRateLimit(id={self.id}, ip='{self.ip_address}', count={self.request_count})>"
+
+
+class User(Base):
+    """사용자 모델 (Task 12.5: RBAC 구현)"""
+    __tablename__ = "users"
+    
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    username: Mapped[str] = mapped_column(String(50), unique=True, nullable=False, index=True)
+    email: Mapped[str] = mapped_column(String(100), unique=True, nullable=False, index=True)
+    password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+    role: Mapped[str] = mapped_column(Enum('admin', 'user', 'moderator'), default='user', nullable=False, index=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
+    last_login_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # 관계 정의
+    owned_files: Mapped[List["FileInfo"]] = relationship("FileInfo", back_populates="owner")
+    audit_logs: Mapped[List["AuditLog"]] = relationship("AuditLog", back_populates="user")
+    
+    def __repr__(self):
+        return f"<User(id={self.id}, username='{self.username}', role='{self.role}')>"
+
+
+class AuditLog(Base):
+    """감사 로그 모델 (Task 12.5: 보안 추적성)"""
+    __tablename__ = "audit_logs"
+    
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    user_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("users.id"), index=True)
+    ip_address: Mapped[str] = mapped_column(String(45), nullable=False, index=True)
+    user_agent: Mapped[Optional[str]] = mapped_column(Text)
+    action: Mapped[str] = mapped_column(String(50), nullable=False, index=True)  # create, read, update, delete, login, logout
+    resource_type: Mapped[str] = mapped_column(String(50), nullable=False, index=True)  # file, user, system
+    resource_id: Mapped[Optional[str]] = mapped_column(String(100), index=True)  # file_uuid, user_id 등
+    resource_name: Mapped[Optional[str]] = mapped_column(String(255))  # 파일명, 사용자명 등
+    details: Mapped[Optional[str]] = mapped_column(Text)  # 상세 정보 (JSON 형태)
+    status: Mapped[str] = mapped_column(Enum('success', 'failed', 'denied'), default='success', index=True)
+    error_message: Mapped[Optional[str]] = mapped_column(Text)
+    request_path: Mapped[str] = mapped_column(String(500), nullable=False)
+    request_method: Mapped[str] = mapped_column(String(10), nullable=False)
+    response_code: Mapped[Optional[int]] = mapped_column(Integer)
+    processing_time_ms: Mapped[Optional[int]] = mapped_column(Integer)
+    session_id: Mapped[Optional[str]] = mapped_column(String(100), index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
+    
+    # 관계 정의
+    user: Mapped[Optional["User"]] = relationship("User", back_populates="audit_logs")
+    
+    def __repr__(self):
+        return f"<AuditLog(id={self.id}, user_id={self.user_id}, action='{self.action}', resource='{self.resource_type}')>" 

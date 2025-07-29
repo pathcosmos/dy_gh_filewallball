@@ -1,0 +1,444 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboards
+  namespace: monitoring
+data:
+  filewallball-dashboard.json: |
+    {
+      "dashboard": {
+        "id": null,
+        "title": "FileWallBall API Dashboard",
+        "tags": ["filewallball", "api", "monitoring"],
+        "style": "dark",
+        "timezone": "browser",
+        "panels": [
+          {
+            "id": 1,
+            "title": "File Upload Rate",
+            "type": "stat",
+            "targets": [
+              {
+                "expr": "rate(file_uploads_total[5m])",
+                "legendFormat": "Uploads/sec"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "color": {
+                  "mode": "palette-classic"
+                },
+                "custom": {
+                  "displayMode": "list"
+                },
+                "mappings": [],
+                "thresholds": {
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "red",
+                      "value": 80
+                    }
+                  ]
+                }
+              }
+            },
+            "gridPos": {
+              "h": 8,
+              "w": 6,
+              "x": 0,
+              "y": 0
+            }
+          },
+          {
+            "id": 2,
+            "title": "File Download Rate",
+            "type": "stat",
+            "targets": [
+              {
+                "expr": "rate(file_downloads_total[5m])",
+                "legendFormat": "Downloads/sec"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "color": {
+                  "mode": "palette-classic"
+                },
+                "custom": {
+                  "displayMode": "list"
+                },
+                "mappings": [],
+                "thresholds": {
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "red",
+                      "value": 80
+                    }
+                  ]
+                }
+              }
+            },
+            "gridPos": {
+              "h": 8,
+              "w": 6,
+              "x": 6,
+              "y": 0
+            }
+          },
+          {
+            "id": 3,
+            "title": "Cache Hit Rate",
+            "type": "stat",
+            "targets": [
+              {
+                "expr": "rate(cache_hits_total[5m]) / (rate(cache_hits_total[5m]) + rate(cache_misses_total[5m])) * 100",
+                "legendFormat": "Hit Rate %"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "color": {
+                  "mode": "palette-classic"
+                },
+                "custom": {
+                  "displayMode": "list"
+                },
+                "mappings": [],
+                "thresholds": {
+                  "steps": [
+                    {
+                      "color": "red",
+                      "value": null
+                    },
+                    {
+                      "color": "yellow",
+                      "value": 50
+                    },
+                    {
+                      "color": "green",
+                      "value": 80
+                    }
+                  ]
+                },
+                "unit": "percent"
+              }
+            },
+            "gridPos": {
+              "h": 8,
+              "w": 6,
+              "x": 12,
+              "y": 0
+            }
+          },
+          {
+            "id": 4,
+            "title": "Error Rate",
+            "type": "stat",
+            "targets": [
+              {
+                "expr": "rate(error_rate_total[5m])",
+                "legendFormat": "Errors/sec"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "color": {
+                  "mode": "palette-classic"
+                },
+                "custom": {
+                  "displayMode": "list"
+                },
+                "mappings": [],
+                "thresholds": {
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "red",
+                      "value": 1
+                    }
+                  ]
+                }
+              }
+            },
+            "gridPos": {
+              "h": 8,
+              "w": 6,
+              "x": 18,
+              "y": 0
+            }
+          },
+          {
+            "id": 5,
+            "title": "File Upload Duration",
+            "type": "heatmap",
+            "targets": [
+              {
+                "expr": "rate(file_upload_duration_seconds_bucket[5m])",
+                "legendFormat": "{{le}}"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "color": {
+                  "mode": "palette-classic"
+                },
+                "custom": {
+                  "hideFrom": {
+                    "legend": false,
+                    "tooltip": false,
+                    "vis": false
+                  }
+                },
+                "mappings": []
+              }
+            },
+            "gridPos": {
+              "h": 8,
+              "w": 12,
+              "x": 0,
+              "y": 8
+            }
+          },
+          {
+            "id": 6,
+            "title": "File Processing Duration",
+            "type": "heatmap",
+            "targets": [
+              {
+                "expr": "rate(file_processing_duration_seconds_bucket[5m])",
+                "legendFormat": "{{le}}"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "color": {
+                  "mode": "palette-classic"
+                },
+                "custom": {
+                  "hideFrom": {
+                    "legend": false,
+                    "tooltip": false,
+                    "vis": false
+                  }
+                },
+                "mappings": []
+              }
+            },
+            "gridPos": {
+              "h": 8,
+              "w": 12,
+              "x": 12,
+              "y": 8
+            }
+          },
+          {
+            "id": 7,
+            "title": "HTTP Request Rate",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "rate(http_requests_total[5m])",
+                "legendFormat": "{{method}} {{route}}"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "color": {
+                  "mode": "palette-classic"
+                },
+                "custom": {
+                  "axisLabel": "",
+                  "axisPlacement": "auto",
+                  "barAlignment": 0,
+                  "drawStyle": "line",
+                  "fillOpacity": 10,
+                  "gradientMode": "none",
+                  "hideFrom": {
+                    "legend": false,
+                    "tooltip": false,
+                    "vis": false
+                  },
+                  "lineInterpolation": "linear",
+                  "lineWidth": 1,
+                  "pointSize": 5,
+                  "scaleDistribution": {
+                    "type": "linear"
+                  },
+                  "showPoints": "never",
+                  "spanNulls": false,
+                  "stacking": {
+                    "group": "A",
+                    "mode": "none"
+                  },
+                  "thresholdsStyle": {
+                    "mode": "off"
+                  }
+                },
+                "mappings": [],
+                "thresholds": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "red",
+                      "value": 80
+                    }
+                  ]
+                },
+                "unit": "reqps"
+              }
+            },
+            "gridPos": {
+              "h": 8,
+              "w": 24,
+              "x": 0,
+              "y": 16
+            }
+          },
+          {
+            "id": 8,
+            "title": "Error Rate by Type",
+            "type": "piechart",
+            "targets": [
+              {
+                "expr": "rate(error_rate_total[5m])",
+                "legendFormat": "{{error_type}}"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "color": {
+                  "mode": "palette-classic"
+                },
+                "custom": {
+                  "hideFrom": {
+                    "legend": false,
+                    "tooltip": false,
+                    "vis": false
+                  }
+                },
+                "mappings": []
+              }
+            },
+            "gridPos": {
+              "h": 8,
+              "w": 12,
+              "x": 0,
+              "y": 24
+            }
+          },
+          {
+            "id": 9,
+            "title": "Cache Performance",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "rate(cache_hits_total[5m])",
+                "legendFormat": "Cache Hits"
+              },
+              {
+                "expr": "rate(cache_misses_total[5m])",
+                "legendFormat": "Cache Misses"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "color": {
+                  "mode": "palette-classic"
+                },
+                "custom": {
+                  "axisLabel": "",
+                  "axisPlacement": "auto",
+                  "barAlignment": 0,
+                  "drawStyle": "line",
+                  "fillOpacity": 10,
+                  "gradientMode": "none",
+                  "hideFrom": {
+                    "legend": false,
+                    "tooltip": false,
+                    "vis": false
+                  },
+                  "lineInterpolation": "linear",
+                  "lineWidth": 1,
+                  "pointSize": 5,
+                  "scaleDistribution": {
+                    "type": "linear"
+                  },
+                  "showPoints": "never",
+                  "spanNulls": false,
+                  "stacking": {
+                    "group": "A",
+                    "mode": "none"
+                  },
+                  "thresholdsStyle": {
+                    "mode": "off"
+                  }
+                },
+                "mappings": [],
+                "thresholds": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "red",
+                      "value": 80
+                    }
+                  ]
+                },
+                "unit": "reqps"
+              }
+            },
+            "gridPos": {
+              "h": 8,
+              "w": 12,
+              "x": 12,
+              "y": 24
+            }
+          }
+        ],
+        "time": {
+          "from": "now-1h",
+          "to": "now"
+        },
+        "timepicker": {},
+        "templating": {
+          "list": []
+        },
+        "annotations": {
+          "list": []
+        },
+        "refresh": "5s",
+        "schemaVersion": 16,
+        "version": 0,
+        "links": []
+      }
+    }
+  dashboard-provider.yaml: |
+    apiVersion: 1
+    providers:
+    - name: 'default'
+      orgId: 1
+      folder: ''
+      type: file
+      disableDeletion: false
+      updateIntervalSeconds: 10
+      allowUiUpdates: true
+      options:
+        path: /etc/grafana/provisioning/dashboards 
