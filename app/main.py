@@ -10,7 +10,16 @@ from fastapi import (
     Request, Depends
 )
 from fastapi.responses import FileResponse, Response, JSONResponse
-from app.middleware.security_headers import SecurityHeadersMiddleware, CORSValidationMiddleware
+from app.middleware.security_headers import (
+    EnhancedSecurityHeadersMiddleware,
+    CORSValidationMiddleware,
+)
+from app.middleware.rate_limiting_middleware import (
+    rate_limit_middleware,
+    rate_limit_exceeded_handler,
+    limiter,
+    advanced_limiter
+)
 from pydantic import BaseModel
 import redis
 from prometheus_client import (
@@ -36,6 +45,7 @@ from app.services.scheduler_service import scheduler_service
 from app.services.file_validation_service import file_validation_service
 from app.services.rbac_service import rbac_service
 from app.middleware.audit_middleware import AuditMiddleware
+from app.middleware.auth import get_current_user, require_admin
 
 # Redis 연결
 redis_client = redis.Redis(
@@ -47,9 +57,16 @@ redis_client = redis.Redis(
 
 app = FastAPI(title="File Management API", version="1.0.0")
 
+# 레이트 리미팅 미들웨어 설정
+app.middleware("http")(rate_limit_middleware)
+
 # 보안 헤더 및 CORS 정책 설정
-app.add_middleware(SecurityHeadersMiddleware)
-app.add_middleware(CORSValidationMiddleware)
+app.add_middleware(EnhancedSecurityHeadersMiddleware)
+app.add_middleware(CORSValidationMiddleware, strict_mode=True)
+
+# slowapi 에러 핸들러 등록
+from slowapi.errors import RateLimitExceeded
+app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
 
 # 라우터 등록
 app.include_router(ip_auth_router)
@@ -815,6 +832,134 @@ async def get_user_permissions(
         )
 
 
+@app.get("/api/v1/rate-limit/status")
+async def get_rate_limit_status(
+    request: Request,
+    current_user=Depends(require_admin)
+):
+    """
+    레이트 리미트 상태 조회 API
+    Task 8: 레이트 리미팅 및 보안 헤더 구현
+    """
+    try:
+        # 현재 클라이언트 IP의 레이트 리미트 상태 확인
+        rate_limit_types = ["upload", "download", "read", "api", "auth"]
+        status_info = {}
+        
+        for limit_type in rate_limit_types:
+            result = await advanced_limiter.check_rate_limit(request, limit_type)
+            status_info[limit_type] = {
+                "limit": result.get("limit", 0),
+                "remaining": result.get("remaining", 0),
+                "reset_time": result.get("reset_time", 0),
+                "allowed": result.get("allowed", True)
+            }
+        
+        return {
+            "client_ip": request.client.host,
+            "rate_limits": status_info,
+            "message": "레이트 리미트 상태를 성공적으로 조회했습니다",
+            "status": "success"
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, 
+            detail=f"레이트 리미트 상태 조회 중 오류가 발생했습니다: {str(e)}"
+        )
+
+
+@app.post("/api/v1/rate-limit/reset/{ip_address}")
+async def reset_rate_limit(
+    ip_address: str,
+    limit_type: str = "all",
+    current_user=Depends(require_admin)
+):
+    """
+    특정 IP의 레이트 리미트 초기화 API
+    Task 8: 레이트 리미팅 및 보안 헤더 구현
+    """
+    try:
+        redis_client = advanced_limiter.redis_client
+        if not redis_client:
+            raise HTTPException(status_code=500, detail="Redis 연결이 없습니다")
+        
+        reset_count = 0
+        
+        if limit_type == "all":
+            # 모든 레이트 리미트 타입 초기화
+            for lt in ["upload", "download", "read", "api", "auth"]:
+                key = f"rate_limit:{lt}:{ip_address}"
+                if await redis_client.delete(key):
+                    reset_count += 1
+        else:
+            # 특정 타입만 초기화
+            key = f"rate_limit:{limit_type}:{ip_address}"
+            if await redis_client.delete(key):
+                reset_count = 1
+        
+        return {
+            "ip_address": ip_address,
+            "limit_type": limit_type,
+            "reset_count": reset_count,
+            "message": f"IP {ip_address}의 레이트 리미트가 초기화되었습니다",
+            "status": "success"
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, 
+            detail=f"레이트 리미트 초기화 중 오류가 발생했습니다: {str(e)}"
+        )
+
+
+@app.get("/api/v1/security/info")
+async def get_security_info():
+    """
+    보안 설정 정보 조회 API
+    Task 8: 레이트 리미팅 및 보안 헤더 구현
+    """
+    return {
+        "message": "Security configuration information",
+        "status": "success",
+        "security_features": {
+            "rate_limiting": {
+                "enabled": True,
+                "redis_based": True,
+                "limits": {
+                    "upload": "10 requests/minute",
+                    "download": "100 requests/minute", 
+                    "read": "1000 requests/minute",
+                    "api": "500 requests/minute",
+                    "auth": "5 requests/minute"
+                },
+                "ddos_protection": {
+                    "enabled": True,
+                    "threshold": "100 requests/10 seconds",
+                    "auto_block": True
+                }
+            },
+            "security_headers": {
+                "csp": "Strict Content Security Policy",
+                "hsts": "HTTP Strict Transport Security (HTTPS only)",
+                "xss_protection": "XSS Protection disabled (modern browsers)",
+                "frame_options": "X-Frame-Options: DENY",
+                "content_type_options": "X-Content-Type-Options: nosniff",
+                "cross_origin_policies": "Strict cross-origin policies"
+            },
+            "cors": {
+                "strict_mode": True,
+                "environment_based": True,
+                "preflight_support": True,
+                "credential_support": True
+            },
+            "ip_authentication": {
+                "whitelist_blacklist": True,
+                "cidr_support": True,
+                "proxy_aware": True
+            }
+        }
+    }
+
+
 @app.on_event("startup")
 async def startup_event():
     """애플리케이션 시작 시 실행되는 이벤트"""
@@ -822,8 +967,18 @@ async def startup_event():
         # 스케줄러 시작
         await scheduler_service.start_scheduler()
         print("✅ File cleanup scheduler started successfully")
+        
+        # 레이트 리미팅 설정 검증
+        if advanced_limiter.redis_client:
+            print("✅ Rate limiting with Redis enabled")
+        else:
+            print("⚠️ Rate limiting without Redis (fallback mode)")
+        
+        print("✅ Enhanced security headers enabled")
+        print("✅ CORS validation in strict mode")
+        
     except Exception as e:
-        print(f"❌ Failed to start scheduler: {e}")
+        print(f"❌ Failed to start services: {e}")
 
 
 @app.on_event("shutdown")
@@ -833,7 +988,13 @@ async def shutdown_event():
         # 스케줄러 중지
         await scheduler_service.stop_scheduler()
         print("✅ File cleanup scheduler stopped successfully")
+        
+        # Redis 연결 정리
+        if advanced_limiter.redis_client:
+            await advanced_limiter.redis_client.close()
+            print("✅ Redis connections closed")
+            
     except Exception as e:
-        print(f"❌ Failed to stop scheduler: {e}")
+        print(f"❌ Failed to stop services: {e}")
 
 
