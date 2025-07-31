@@ -968,19 +968,9 @@ FileWallBall 프로젝트의 모든 문서를 체계적으로 정리한 가이�
 
 ## 📞 지원 및 문의
 
-### 문서 관련 문의
-- **문서 오류 신고**: GitHub Issues에 "Documentation" 라벨로 등록
-- **문서 개선 제안**: Pull Request로 제안
-- **문서 작성 가이드**: [문서 작성 스타일 가이드](CONTRIBUTING.md#documentation)
+문의사항이 있으시면 아래 이메일로 메일을 보내주세요.
 
-### 기술 지원
-- **개발 관련 문의**: 개발팀 (dev@filewallball.com)
-- **운영 관련 문의**: 운영팀 (ops@filewallball.com)
-- **보안 관련 문의**: 보안팀 (security@filewallball.com)
-
-### 커뮤니티
-- [GitHub Issues](https://github.com/filewallball/api/issues)
-- [GitHub Discussions](https://github.com/filewallball/api/discussions)
+**📧 이메일**: lanco.gh@gmail.com
 
 ## 📝 문서 기여하기
 
@@ -1018,7 +1008,9 @@ MIT License - 자유롭게 사용, 수정, 배포할 수 있는 오픈소스 라
 
 ## 📞 지원
 
-문제가 발생하거나 질문이 있으시면 이슈를 생성해주세요.
+문제가 발생하거나 질문이 있으시면 이메일로 문의해주세요.
+
+**📧 이메일**: lanco.gh@gmail.com
 
 ---
 
