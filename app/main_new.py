@@ -12,10 +12,14 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
+from app.middleware import (
+    LoggingMiddleware,
+    RequestIdMiddleware,
+    ResponseTimeMiddleware,
+)
 from app.models.database import init_database
-from app.middleware import RequestIdMiddleware, ResponseTimeMiddleware, LoggingMiddleware
+from app.routers import files_router, health_router
 from app.utils.logging_config import setup_logging
-from app.routers import health_router, files_router
 
 # 설정 가져오기
 settings = get_settings()
@@ -24,7 +28,7 @@ settings = get_settings()
 setup_logging(
     log_level=settings.log_level,
     log_format=settings.log_format,
-    log_file=settings.log_file
+    log_file=settings.log_file,
 )
 
 logger = logging.getLogger(__name__)
@@ -35,15 +39,15 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """애플리케이션 생명주기 관리"""
     # 시작 시 실행
     logger.info("Starting FileWallBall application...")
-    
+
     # 데이터베이스 초기화
     if init_database():
         logger.info("Database initialized successfully")
     else:
         logger.error("Database initialization failed")
-    
+
     yield
-    
+
     # 종료 시 실행
     logger.info("Shutting down FileWallBall application...")
 
@@ -56,7 +60,7 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc",
     lifespan=lifespan,
-    debug=settings.debug
+    debug=settings.debug,
 )
 
 # 커스텀 미들웨어 추가
@@ -85,17 +89,17 @@ async def root():
         "message": settings.app_name,
         "version": settings.app_version,
         "docs": "/docs",
-        "health": "/api/v1/health"
+        "health": "/api/v1/health",
     }
 
 
 if __name__ == "__main__":
     import uvicorn
-    
+
     uvicorn.run(
         "app.main_new:app",
         host=settings.host,
         port=settings.port,
         reload=settings.debug,
-        log_level=settings.log_level.lower()
-    ) 
+        log_level=settings.log_level.lower(),
+    )

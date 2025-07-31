@@ -280,18 +280,18 @@ def cache_file_metadata(file_uuid: str, metadata: dict):
     """파일 메타데이터 캐싱"""
     redis_client = get_redis_client()
     cache_key = CacheKeys.FILE_META.format(file_uuid=file_uuid)
-    
+
     success = redis_client.set_with_ttl(
-        cache_key, 
-        metadata, 
+        cache_key,
+        metadata,
         CacheTTL.FILE_META
     )
-    
+
     if success:
         logger.info(f"파일 메타데이터 캐싱 성공: {file_uuid}")
     else:
         logger.error(f"파일 메타데이터 캐싱 실패: {file_uuid}")
-    
+
     return success
 ```
 
@@ -301,20 +301,20 @@ def cache_user_session(user_id: int, session_data: dict):
     """사용자 세션 캐싱"""
     redis_client = get_redis_client()
     session_key = CacheKeys.SESSION.format(user_id=user_id)
-    
+
     success = redis_client.set_with_ttl(
         session_key,
         session_data,
         CacheTTL.SESSION
     )
-    
+
     return success
 
 def get_user_session(user_id: int):
     """사용자 세션 조회"""
     redis_client = get_redis_client()
     session_key = CacheKeys.SESSION.format(user_id=user_id)
-    
+
     session_data = redis_client.get(session_key)
     return session_data
 ```
@@ -325,19 +325,19 @@ def update_upload_progress(upload_id: str, progress: int, status: str):
     """업로드 진행률 업데이트"""
     redis_client = get_redis_client()
     progress_key = CacheKeys.TEMP_UPLOAD_PROGRESS.format(upload_id=upload_id)
-    
+
     progress_data = {
         "progress": progress,
         "status": status,
         "timestamp": time.time()
     }
-    
+
     success = redis_client.set_with_ttl(
         progress_key,
         progress_data,
         CacheTTL.TEMP_DATA
     )
-    
+
     return success
 ```
 
@@ -355,11 +355,11 @@ def check_cache_health():
     """캐시 상태 확인"""
     redis_client = get_redis_client()
     stats = redis_client.get_stats()
-    
+
     hit_rate = stats.get('hit_rate', 0)
     if hit_rate < 80:
         logger.warning(f"캐시 히트율 낮음: {hit_rate}%")
-    
+
     info = redis_client.get_info()
     used_memory = info.get('used_memory_human', '0B')
     logger.info(f"Redis 메모리 사용량: {used_memory}")
@@ -384,4 +384,4 @@ def check_cache_health():
 
 ---
 
-**최종 결과**: FileWallBall Redis 클라이언트가 성공적으로 구현되었습니다. 연결 풀 관리, TTL 기반 캐싱, 성능 최적화, 모니터링 기능이 모두 포함되어 있으며, 다양한 환경에서 안정적으로 작동합니다. 
+**최종 결과**: FileWallBall Redis 클라이언트가 성공적으로 구현되었습니다. 연결 풀 관리, TTL 기반 캐싱, 성능 최적화, 모니터링 기능이 모두 포함되어 있으며, 다양한 환경에서 안정적으로 작동합니다.

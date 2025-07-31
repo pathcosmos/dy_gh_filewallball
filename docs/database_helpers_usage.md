@@ -37,7 +37,7 @@ file_data = {
 
 # 파일 생성 (UUID 자동 생성)
 file_info = helpers.create_file_with_metadata(
-    file_data, 
+    file_data,
     tags=['document', 'pdf', 'important']
 )
 
@@ -82,13 +82,13 @@ if file_with_relations:
 ```python
 # 태그 일괄 추가
 success = helpers.add_tags_to_file(
-    file_id=1, 
+    file_id=1,
     tag_names=["document", "pdf", "important"]
 )
 
 # 태그 제거
 success = helpers.remove_tags_from_file(
-    file_id=1, 
+    file_id=1,
     tag_names=["old_tag"]
 )
 
@@ -206,10 +206,10 @@ try:
         # 여러 데이터베이스 작업 수행
         file1 = FileInfo(...)
         session.add(file1)
-        
+
         file2 = FileInfo(...)
         session.add(file2)
-        
+
         # 성공 시 자동 커밋
 except Exception as e:
     # 실패 시 자동 롤백
@@ -295,4 +295,4 @@ pytest tests/test_database_helpers.py -v
 
 # 통합 테스트 (실제 DB 필요)
 pytest tests/test_database_helpers.py -m integration
-``` 
+```

@@ -125,4 +125,4 @@ kubectl logs <mariadb-pod> -n filewallball | grep -E "(slow_query|long_query_tim
 
 # 연결 수 관련 로그
 kubectl logs <mariadb-pod> -n filewallball | grep -E "(max_connections|connection_count)"
-``` 
+```

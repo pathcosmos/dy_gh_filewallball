@@ -1,0 +1,66 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis-sentinel
+  namespace: filewallball
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: redis-sentinel
+  template:
+    metadata:
+      labels:
+        app: redis-sentinel
+    spec:
+      serviceAccountName: redis
+      initContainers:
+      - name: copy-sentinel-conf
+        image: busybox
+        command: ["sh", "-c", "cp /config/sentinel.conf /data/sentinel.conf"]
+        volumeMounts:
+        - name: sentinel-config
+          mountPath: /config
+        - name: sentinel-data
+          mountPath: /data
+      containers:
+      - name: sentinel
+        image: redis:7-alpine
+        command: ["redis-sentinel", "/data/sentinel.conf"]
+        ports:
+        - containerPort: 26379
+          name: sentinel
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            cpu: 100m
+            memory: 128Mi
+        volumeMounts:
+        - name: sentinel-data
+          mountPath: /data
+        livenessProbe:
+          exec:
+            command:
+            - redis-cli
+            - -p
+            - "26379"
+            - ping
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          exec:
+            command:
+            - redis-cli
+            - -p
+            - "26379"
+            - ping
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      volumes:
+      - name: sentinel-config
+        configMap:
+          name: redis-sentinel-config
+      - name: sentinel-data
+        emptyDir: {}

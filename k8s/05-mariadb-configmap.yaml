@@ -1,0 +1,48 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mariadb-config
+  namespace: filewallball
+data:
+  my.cnf: |
+    [mysqld]
+    # 기본 설정
+    port = 3306
+    bind-address = 0.0.0.0
+
+    # 문자셋 설정
+    character-set-server = utf8mb4
+    collation-server = utf8mb4_unicode_ci
+
+    # InnoDB 설정
+    innodb_buffer_pool_size = 256M
+    innodb_log_file_size = 64M
+    innodb_flush_log_at_trx_commit = 2
+
+    # 연결 설정
+    max_connections = 200
+    max_connect_errors = 1000
+
+    # 쿼리 캐시 (MariaDB 10.1.7+)
+    query_cache_type = 1
+    query_cache_size = 32M
+
+    # 로그 설정
+    slow_query_log = 1
+    slow_query_log_file = /var/log/mysql/slow.log
+    long_query_time = 2
+
+    # 바이너리 로그 (백업용)
+    log-bin = mysql-bin
+    binlog_format = ROW
+    expire_logs_days = 7
+
+    # 보안 설정
+    skip-name-resolve
+    local-infile = 0
+
+    [mysql]
+    default-character-set = utf8mb4
+
+    [client]
+    default-character-set = utf8mb4

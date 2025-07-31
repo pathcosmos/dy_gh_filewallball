@@ -150,11 +150,11 @@ data:
     # 캐싱 정책 설정
     maxmemory 256mb
     maxmemory-policy allkeys-lru
-    
+
     # AOF 설정
     appendonly yes
     appendfsync everysec
-    
+
     # 성능 최적화
     tcp-nodelay yes
     maxmemory-samples 5
@@ -253,4 +253,4 @@ r.setex(f"temp:upload:progress:{upload_id}", 600, json.dumps(progress_data))
 
 ---
 
-**최종 결과**: FileWallBall Redis 캐싱 정책이 성공적으로 구현되었습니다. TTL 정책, 메모리 관리, 성능 최적화가 모두 적용되어 있으며, 테스트를 통해 정상 작동을 확인했습니다. 
+**최종 결과**: FileWallBall Redis 캐싱 정책이 성공적으로 구현되었습니다. TTL 정책, 메모리 관리, 성능 최적화가 모두 적용되어 있으며, 테스트를 통해 정상 작동을 확인했습니다.

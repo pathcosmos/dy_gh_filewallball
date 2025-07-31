@@ -231,7 +231,7 @@ SELECT @@tx_isolation;
 ```sql
 -- 생성된 트리거 목록
 SELECT TRIGGER_NAME, EVENT_OBJECT_TABLE, ACTION_TIMING
-FROM information_schema.TRIGGERS 
+FROM information_schema.TRIGGERS
 WHERE TRIGGER_SCHEMA = 'filewallball_db';
 ```
 
@@ -239,7 +239,7 @@ WHERE TRIGGER_SCHEMA = 'filewallball_db';
 ```sql
 -- 생성된 프로시저 목록
 SELECT ROUTINE_NAME, ROUTINE_TYPE
-FROM information_schema.ROUTINES 
+FROM information_schema.ROUTINES
 WHERE ROUTINE_SCHEMA = 'filewallball_db';
 ```
 
@@ -262,4 +262,4 @@ WHERE ROUTINE_SCHEMA = 'filewallball_db';
 
 ---
 
-**최종 결과**: FileWallBall ACID 트랜잭션 및 데이터 무결성 보장이 성공적으로 구현되었습니다. 모든 ACID 속성이 보장되며, 동시성 제어와 데이터 무결성이 완벽하게 작동합니다. 
+**최종 결과**: FileWallBall ACID 트랜잭션 및 데이터 무결성 보장이 성공적으로 구현되었습니다. 모든 ACID 속성이 보장되며, 동시성 제어와 데이터 무결성이 완벽하게 작동합니다.

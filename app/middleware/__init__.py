@@ -2,12 +2,8 @@
 Custom middleware for the FastAPI application.
 """
 
+from .logging import LoggingMiddleware
 from .request_id import RequestIdMiddleware
 from .response_time import ResponseTimeMiddleware
-from .logging import LoggingMiddleware
 
-__all__ = [
-    "RequestIdMiddleware",
-    "ResponseTimeMiddleware", 
-    "LoggingMiddleware"
-] 
+__all__ = ["RequestIdMiddleware", "ResponseTimeMiddleware", "LoggingMiddleware"]

@@ -1,18 +1,49 @@
-fastapi==0.104.1
-uvicorn[standard]==0.24.0
-python-multipart==0.0.6
-aiofiles==23.2.1
-python-jose[cryptography]==3.3.0
-passlib[bcrypt]==1.7.4
-python-dotenv==1.0.0
-redis==5.0.1
-kubernetes==28.1.0
-prometheus-client==0.19.0
-prometheus-fastapi-instrumentator==6.1.0
-sqlalchemy==2.0.23
-pymysql==1.1.0
-cryptography==41.0.7
-pillow==10.1.0
-pydantic-settings==2.1.0
-APScheduler==3.10.4
-python-magic==0.4.27 
+# FileWallBall API Dependencies
+# This file is generated from pyproject.toml for traditional pip installation
+
+# Core FastAPI dependencies
+fastapi>=0.104.1
+uvicorn[standard]>=0.24.0
+python-multipart>=0.0.6
+aiofiles>=23.2.1
+
+# Authentication and security
+python-jose[cryptography]>=3.3.0
+passlib[bcrypt]>=1.7.4
+cryptography>=41.0.7
+
+# Configuration and environment
+python-dotenv>=1.0.0
+pydantic-settings>=2.1.0
+
+# Database and ORM
+sqlalchemy>=2.0.23
+pymysql>=1.1.0
+alembic>=1.16.4
+
+# Caching and Redis
+redis>=5.0.1
+
+# Kubernetes integration
+kubernetes>=28.1.0
+
+# Monitoring and metrics
+prometheus-client>=0.19.0
+prometheus-fastapi-instrumentator>=6.1.0
+
+# File processing
+pillow>=10.2.0
+python-magic>=0.4.27
+chardet>=5.2.0
+
+# Background tasks and scheduling
+APScheduler>=3.10.4
+
+# Rate limiting
+slowapi>=0.1.9
+
+# System monitoring
+psutil>=5.9.0
+
+# Logging
+structlog>=23.2.0

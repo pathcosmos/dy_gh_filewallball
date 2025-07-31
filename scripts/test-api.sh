@@ -53,4 +53,4 @@ curl -s -X DELETE "${BASE_URL}/files/${FILE_ID}" | jq .
 # 정리
 rm -f test_file.txt downloaded_file.txt
 
-echo "✅ API 테스트 완료!" 
+echo "✅ API 테스트 완료!"

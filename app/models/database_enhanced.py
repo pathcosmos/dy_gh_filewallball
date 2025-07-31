@@ -2,33 +2,34 @@
 Enhanced database connection and session management.
 """
 
-import os
 import functools
-from typing import Optional, Callable, Any
-from contextlib import contextmanager
-from sqlalchemy import create_engine, text
-from sqlalchemy.orm import sessionmaker, Session
-from sqlalchemy.pool import QueuePool
-from sqlalchemy.exc import SQLAlchemyError
 import logging
+import os
+from contextlib import contextmanager
+from typing import Any, Callable, Optional
+
+from sqlalchemy import create_engine, text
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.pool import QueuePool
 
 logger = logging.getLogger(__name__)
 
 
 class EnhancedDatabaseManager:
     """향상된 데이터베이스 연결 및 관리 클래스"""
-    
+
     def __init__(self):
         # 데이터베이스 설정
-        self.db_host = os.getenv('DB_HOST', 'mariadb-service')
-        self.db_port = os.getenv('DB_PORT', '3306')
-        self.db_name = os.getenv('DB_NAME', 'filewallball_db')
-        self.db_user = os.getenv('DB_USER', 'filewallball_user')
-        self.db_password = os.getenv('DB_PASSWORD', 'filewallball_user_password')
-        
+        self.db_host = os.getenv("DB_HOST", "mariadb-service")
+        self.db_port = os.getenv("DB_PORT", "3306")
+        self.db_name = os.getenv("DB_NAME", "filewallball_db")
+        self.db_user = os.getenv("DB_USER", "filewallball_user")
+        self.db_password = os.getenv("DB_PASSWORD", "filewallball_user_password")
+
         # 데이터베이스 URL
         self.database_url = f"mysql+pymysql://{self.db_user}:{self.db_password}@{self.db_host}:{self.db_port}/{self.db_name}"
-        
+
         # 향상된 SQLAlchemy 엔진 설정
         self.engine = create_engine(
             self.database_url,
@@ -43,23 +44,23 @@ class EnhancedDatabaseManager:
             connect_args={
                 "charset": "utf8mb4",
                 "autocommit": False,
-                "sql_mode": "STRICT_TRANS_TABLES,NO_ZERO_DATE,NO_ZERO_IN_DATE,ERROR_FOR_DIVISION_BY_ZERO"
-            }
+                "sql_mode": "STRICT_TRANS_TABLES,NO_ZERO_DATE,NO_ZERO_IN_DATE,ERROR_FOR_DIVISION_BY_ZERO",
+            },
         )
-        
+
         # 세션 팩토리
         self.SessionLocal = sessionmaker(
-            autocommit=False,
-            autoflush=False,
-            bind=self.engine
+            autocommit=False, autoflush=False, bind=self.engine
         )
-        
-        logger.info(f"Enhanced database manager initialized with pool_size=20, max_overflow=30")
-    
+
+        logger.info(
+            f"Enhanced database manager initialized with pool_size=20, max_overflow=30"
+        )
+
     def get_db(self) -> Session:
         """데이터베이스 세션 반환"""
         return self.SessionLocal()
-    
+
     def test_connection(self) -> bool:
         """데이터베이스 연결 테스트"""
         try:
@@ -71,7 +72,7 @@ class EnhancedDatabaseManager:
         except Exception as e:
             logger.error(f"Database connection test failed: {e}")
             return False
-    
+
     def get_connection_info(self) -> dict:
         """연결 정보 반환"""
         return {
@@ -82,9 +83,9 @@ class EnhancedDatabaseManager:
             "pool_size": 20,
             "max_overflow": 30,
             "pool_pre_ping": True,
-            "pool_recycle": 3600
+            "pool_recycle": 3600,
         }
-    
+
     def get_pool_status(self) -> dict:
         """연결 풀 상태 정보 반환"""
         try:
@@ -94,12 +95,12 @@ class EnhancedDatabaseManager:
                 "checked_in": pool.checkedin(),
                 "checked_out": pool.checkedout(),
                 "overflow": pool.overflow(),
-                "invalid": pool.invalid()
+                "invalid": pool.invalid(),
             }
         except Exception as e:
             logger.error(f"Failed to get pool status: {e}")
             return {}
-    
+
     @contextmanager
     def get_db_session(self):
         """컨텍스트 매니저를 사용한 데이터베이스 세션"""
@@ -117,26 +118,27 @@ class EnhancedDatabaseManager:
 
 def transaction_rollback_decorator(func: Callable) -> Callable:
     """트랜잭션 롤백 처리 데코레이터"""
+
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
         db_session = None
-        
+
         # 세션 인자 찾기
         for arg in args:
             if isinstance(arg, Session):
                 db_session = arg
                 break
-        
+
         if not db_session:
             for value in kwargs.values():
                 if isinstance(value, Session):
                     db_session = value
                     break
-        
+
         if not db_session:
             logger.warning("No database session found in function arguments")
             return func(*args, **kwargs)
-        
+
         try:
             result = func(*args, **kwargs)
             db_session.commit()
@@ -145,12 +147,13 @@ def transaction_rollback_decorator(func: Callable) -> Callable:
             db_session.rollback()
             logger.error(f"Transaction rollback for function {func.__name__}: {e}")
             raise
-    
+
     return wrapper
 
 
 def with_transaction(db_session: Session):
     """트랜잭션 컨텍스트 데코레이터"""
+
     def decorator(func: Callable) -> Callable:
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
@@ -162,59 +165,64 @@ def with_transaction(db_session: Session):
                 db_session.rollback()
                 logger.error(f"Transaction rollback for {func.__name__}: {e}")
                 raise
+
         return wrapper
+
     return decorator
 
 
 class DatabaseHealthChecker:
     """데이터베이스 헬스 체크 클래스"""
-    
+
     def __init__(self, db_manager: EnhancedDatabaseManager):
         self.db_manager = db_manager
-    
+
     def check_connection(self) -> dict:
         """연결 상태 체크"""
         try:
             is_connected = self.db_manager.test_connection()
             pool_status = self.db_manager.get_pool_status()
-            
+
             return {
                 "status": "healthy" if is_connected else "unhealthy",
                 "connected": is_connected,
                 "pool_status": pool_status,
-                "timestamp": "2025-07-28T01:40:00Z"
+                "timestamp": "2025-07-28T01:40:00Z",
             }
         except Exception as e:
             return {
                 "status": "error",
                 "error": str(e),
                 "connected": False,
-                "timestamp": "2025-07-28T01:40:00Z"
+                "timestamp": "2025-07-28T01:40:00Z",
             }
-    
+
     def check_performance(self) -> dict:
         """성능 체크"""
         try:
             with self.db_manager.get_db_session() as session:
                 # 간단한 쿼리 성능 테스트
                 import time
+
                 start_time = time.time()
-                
-                result = session.execute(text("SELECT COUNT(*) FROM information_schema.tables"))
+
+                result = session.execute(
+                    text("SELECT COUNT(*) FROM information_schema.tables")
+                )
                 result.fetchone()
-                
+
                 query_time = time.time() - start_time
-                
+
                 return {
                     "query_time_ms": round(query_time * 1000, 2),
                     "status": "good" if query_time < 0.1 else "slow",
-                    "timestamp": "2025-07-28T01:40:00Z"
+                    "timestamp": "2025-07-28T01:40:00Z",
                 }
         except Exception as e:
             return {
                 "status": "error",
                 "error": str(e),
-                "timestamp": "2025-07-28T01:40:00Z"
+                "timestamp": "2025-07-28T01:40:00Z",
             }
 
 
@@ -246,15 +254,15 @@ def init_enhanced_database():
         if not enhanced_db_manager.test_connection():
             logger.error("Enhanced database connection failed")
             return False
-        
+
         # 연결 정보 로깅
         connection_info = enhanced_db_manager.get_connection_info()
         logger.info(f"Enhanced database initialized: {connection_info}")
-        
+
         # 풀 상태 로깅
         pool_status = enhanced_db_manager.get_pool_status()
         logger.info(f"Initial pool status: {pool_status}")
-        
+
         return True
     except Exception as e:
         logger.error(f"Enhanced database initialization failed: {e}")
@@ -263,4 +271,4 @@ def init_enhanced_database():
 
 # 기존 호환성을 위한 별칭
 get_db = get_enhanced_db
-init_database = init_enhanced_database 
+init_database = init_enhanced_database

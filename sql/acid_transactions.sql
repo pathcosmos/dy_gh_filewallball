@@ -27,29 +27,29 @@ SELECT @@tx_isolation as configured_isolation;
 
 -- 파일 크기 제약 조건 (이미 테이블에 있지만 확인)
 SELECT '=== 파일 크기 제약 조건 확인 ===' as info;
-SELECT 
+SELECT
     TABLE_NAME,
     COLUMN_NAME,
     DATA_TYPE,
     IS_NULLABLE,
     COLUMN_DEFAULT,
     EXTRA
-FROM information_schema.COLUMNS 
-WHERE TABLE_SCHEMA = 'filewallball_db' 
-AND TABLE_NAME = 'files' 
+FROM information_schema.COLUMNS
+WHERE TABLE_SCHEMA = 'filewallball_db'
+AND TABLE_NAME = 'files'
 AND COLUMN_NAME = 'file_size';
 
 -- 파일 해시 길이 제약 조건 확인
 SELECT '=== 파일 해시 제약 조건 확인 ===' as info;
-SELECT 
+SELECT
     TABLE_NAME,
     COLUMN_NAME,
     DATA_TYPE,
     CHARACTER_MAXIMUM_LENGTH,
     IS_NULLABLE
-FROM information_schema.COLUMNS 
-WHERE TABLE_SCHEMA = 'filewallball_db' 
-AND TABLE_NAME = 'files' 
+FROM information_schema.COLUMNS
+WHERE TABLE_SCHEMA = 'filewallball_db'
+AND TABLE_NAME = 'files'
 AND COLUMN_NAME = 'file_hash';
 
 -- =====================================================
@@ -65,23 +65,23 @@ FOR EACH ROW
 BEGIN
     -- 파일 크기가 0보다 큰지 확인
     IF NEW.file_size <= 0 THEN
-        SIGNAL SQLSTATE '45000' 
+        SIGNAL SQLSTATE '45000'
         SET MESSAGE_TEXT = '파일 크기는 0보다 커야 합니다.';
     END IF;
-    
+
     -- 파일 해시가 NULL이 아닌지 확인
     IF NEW.file_hash IS NULL OR LENGTH(NEW.file_hash) != 32 THEN
-        SIGNAL SQLSTATE '45000' 
+        SIGNAL SQLSTATE '45000'
         SET MESSAGE_TEXT = '파일 해시는 32자리 MD5 해시여야 합니다.';
     END IF;
-    
+
     -- 파일 확장자가 허용된 확장자인지 확인
     IF NOT EXISTS (
-        SELECT 1 FROM file_extensions 
-        WHERE extension = NEW.file_extension 
+        SELECT 1 FROM file_extensions
+        WHERE extension = NEW.file_extension
         AND is_allowed = TRUE
     ) THEN
-        SIGNAL SQLSTATE '45000' 
+        SIGNAL SQLSTATE '45000'
         SET MESSAGE_TEXT = '허용되지 않은 파일 확장자입니다.';
     END IF;
 END//
@@ -93,13 +93,13 @@ FOR EACH ROW
 BEGIN
     -- 파일 크기가 0보다 큰지 확인
     IF NEW.file_size <= 0 THEN
-        SIGNAL SQLSTATE '45000' 
+        SIGNAL SQLSTATE '45000'
         SET MESSAGE_TEXT = '파일 크기는 0보다 커야 합니다.';
     END IF;
-    
+
     -- 삭제된 파일의 UUID는 변경 불가
     IF OLD.is_deleted = TRUE AND NEW.file_uuid != OLD.file_uuid THEN
-        SIGNAL SQLSTATE '45000' 
+        SIGNAL SQLSTATE '45000'
         SET MESSAGE_TEXT = '삭제된 파일의 UUID는 변경할 수 없습니다.';
     END IF;
 END//
@@ -111,11 +111,11 @@ FOR EACH ROW
 BEGIN
     -- 조회한 파일이 실제로 존재하는지 확인
     IF NOT EXISTS (
-        SELECT 1 FROM files 
-        WHERE id = NEW.file_id 
+        SELECT 1 FROM files
+        WHERE id = NEW.file_id
         AND is_deleted = FALSE
     ) THEN
-        SIGNAL SQLSTATE '45000' 
+        SIGNAL SQLSTATE '45000'
         SET MESSAGE_TEXT = '존재하지 않거나 삭제된 파일입니다.';
     END IF;
 END//
@@ -127,19 +127,19 @@ FOR EACH ROW
 BEGIN
     -- 다운로드한 파일이 실제로 존재하는지 확인
     IF NOT EXISTS (
-        SELECT 1 FROM files 
-        WHERE id = NEW.file_id 
+        SELECT 1 FROM files
+        WHERE id = NEW.file_id
         AND is_deleted = FALSE
     ) THEN
-        SIGNAL SQLSTATE '45000' 
+        SIGNAL SQLSTATE '45000'
         SET MESSAGE_TEXT = '존재하지 않거나 삭제된 파일입니다.';
     END IF;
-    
+
     -- 다운로드된 바이트 수가 파일 크기를 초과하지 않는지 확인
     IF NEW.bytes_downloaded IS NOT NULL AND NEW.bytes_downloaded > (
         SELECT file_size FROM files WHERE id = NEW.file_id
     ) THEN
-        SIGNAL SQLSTATE '45000' 
+        SIGNAL SQLSTATE '45000'
         SET MESSAGE_TEXT = '다운로드된 바이트 수가 파일 크기를 초과할 수 없습니다.';
     END IF;
 END//
@@ -151,20 +151,20 @@ FOR EACH ROW
 BEGIN
     -- 파일이 존재하는지 확인
     IF NOT EXISTS (
-        SELECT 1 FROM files 
-        WHERE id = NEW.file_id 
+        SELECT 1 FROM files
+        WHERE id = NEW.file_id
         AND is_deleted = FALSE
     ) THEN
-        SIGNAL SQLSTATE '45000' 
+        SIGNAL SQLSTATE '45000'
         SET MESSAGE_TEXT = '존재하지 않거나 삭제된 파일입니다.';
     END IF;
-    
+
     -- 태그가 존재하는지 확인
     IF NOT EXISTS (
-        SELECT 1 FROM file_tags 
+        SELECT 1 FROM file_tags
         WHERE id = NEW.tag_id
     ) THEN
-        SIGNAL SQLSTATE '45000' 
+        SIGNAL SQLSTATE '45000'
         SET MESSAGE_TEXT = '존재하지 않는 태그입니다.';
     END IF;
 END//
@@ -202,46 +202,46 @@ BEGIN
         ROLLBACK;
         RESIGNAL;
     END;
-    
+
     START TRANSACTION;
-    
+
     -- 파일 중복 검사 (UUID 기반)
-    SELECT id INTO v_file_id 
-    FROM files 
-    WHERE file_uuid = p_file_uuid 
+    SELECT id INTO v_file_id
+    FROM files
+    WHERE file_uuid = p_file_uuid
     FOR UPDATE;
-    
+
     IF v_file_id IS NOT NULL THEN
-        SIGNAL SQLSTATE '45000' 
+        SIGNAL SQLSTATE '45000'
         SET MESSAGE_TEXT = '동일한 UUID를 가진 파일이 이미 존재합니다.';
     END IF;
-    
+
     -- 파일 정보 삽입
     INSERT INTO files (
-        file_uuid, original_filename, stored_filename, 
-        file_extension, mime_type, file_size, file_hash, 
+        file_uuid, original_filename, stored_filename,
+        file_extension, mime_type, file_size, file_hash,
         storage_path, file_category_id, is_public
     ) VALUES (
         p_file_uuid, p_original_filename, p_stored_filename,
         p_file_extension, p_mime_type, p_file_size, p_file_hash,
         p_storage_path, p_file_category_id, p_is_public
     );
-    
+
     SET v_file_id = LAST_INSERT_ID();
-    
+
     -- 업로드 기록 삽입
     INSERT INTO file_uploads (
-        file_id, uploader_ip, user_agent, upload_method, 
+        file_id, uploader_ip, user_agent, upload_method,
         upload_status, session_id
     ) VALUES (
         v_file_id, p_uploader_ip, p_user_agent, p_upload_method,
         'success', p_session_id
     );
-    
+
     SET v_upload_id = LAST_INSERT_ID();
-    
+
     COMMIT;
-    
+
     -- 결과 반환
     SELECT v_file_id as file_id, v_upload_id as upload_id;
 END//
@@ -263,22 +263,22 @@ BEGIN
         ROLLBACK;
         RESIGNAL;
     END;
-    
+
     START TRANSACTION;
-    
+
     -- 파일 정보 조회 (락 적용)
     SELECT id, file_size INTO v_file_id, v_file_size
-    FROM files 
-    WHERE file_uuid = p_file_uuid 
-    AND is_deleted = FALSE 
+    FROM files
+    WHERE file_uuid = p_file_uuid
+    AND is_deleted = FALSE
     AND is_public = TRUE
     FOR UPDATE;
-    
+
     IF v_file_id IS NULL THEN
-        SIGNAL SQLSTATE '45000' 
+        SIGNAL SQLSTATE '45000'
         SET MESSAGE_TEXT = '파일을 찾을 수 없거나 접근 권한이 없습니다.';
     END IF;
-    
+
     -- 다운로드 기록 삽입
     INSERT INTO file_downloads (
         file_id, downloader_ip, user_agent, download_method,
@@ -287,11 +287,11 @@ BEGIN
         v_file_id, p_downloader_ip, p_user_agent, p_download_method,
         v_file_size, p_session_id
     );
-    
+
     SET v_download_id = LAST_INSERT_ID();
-    
+
     COMMIT;
-    
+
     -- 결과 반환
     SELECT v_file_id as file_id, v_download_id as download_id, v_file_size as file_size;
 END//
@@ -322,13 +322,13 @@ READS SQL DATA
 DETERMINISTIC
 BEGIN
     DECLARE v_exists BOOLEAN DEFAULT FALSE;
-    
+
     SELECT EXISTS(
-        SELECT 1 FROM files 
-        WHERE id = p_file_id 
+        SELECT 1 FROM files
+        WHERE id = p_file_id
         AND is_deleted = FALSE
     ) INTO v_exists;
-    
+
     RETURN v_exists;
 END//
 
@@ -339,12 +339,12 @@ READS SQL DATA
 DETERMINISTIC
 BEGIN
     DECLARE v_exists BOOLEAN DEFAULT FALSE;
-    
+
     SELECT EXISTS(
-        SELECT 1 FROM file_tags 
+        SELECT 1 FROM file_tags
         WHERE id = p_tag_id
     ) INTO v_exists;
-    
+
     RETURN v_exists;
 END//
 
@@ -356,4 +356,4 @@ DELIMITER ;
 
 SELECT '=== ACID 트랜잭션 설정 완료 ===' as info;
 SELECT @@tx_isolation as transaction_isolation;
-SELECT 'FileWallBall ACID Transactions and Data Integrity configured successfully!' as status; 
+SELECT 'FileWallBall ACID Transactions and Data Integrity configured successfully!' as status;

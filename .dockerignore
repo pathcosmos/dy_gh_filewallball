@@ -59,7 +59,6 @@ backups/
 tests/
 test_*.py
 docs/
-README.md
 alembic.ini
 alembic/
 k8s/
@@ -72,4 +71,4 @@ taskmaster-config.yaml
 # Docker 관련
 Dockerfile*
 docker-compose*
-.dockerignore 
+.dockerignore

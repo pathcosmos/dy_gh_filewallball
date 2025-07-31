@@ -28,7 +28,7 @@ CREATE TABLE files (
     is_deleted BOOLEAN DEFAULT FALSE COMMENT '삭제 여부',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '생성 시간',
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '수정 시간',
-    
+
     INDEX idx_file_uuid (file_uuid),
     INDEX idx_original_filename (original_filename),
     INDEX idx_file_extension (file_extension),
@@ -50,15 +50,15 @@ CREATE TABLE file_categories (
     color VARCHAR(7) COMMENT '카테고리 색상 (HEX)',
     is_active BOOLEAN DEFAULT TRUE COMMENT '활성화 여부',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '생성 시간',
-    
+
     INDEX idx_name (name),
     INDEX idx_is_active (is_active)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 COMMENT='파일 카테고리 정보';
 
 -- 카테고리 외래키 제약조건
-ALTER TABLE files 
-ADD CONSTRAINT fk_files_category 
+ALTER TABLE files
+ADD CONSTRAINT fk_files_category
 FOREIGN KEY (file_category_id) REFERENCES file_categories(id)
 ON DELETE SET NULL;
 
@@ -79,7 +79,7 @@ CREATE TABLE file_extensions (
     max_file_size BIGINT UNSIGNED DEFAULT 104857600 COMMENT '최대 파일 크기 (100MB)',
     is_allowed BOOLEAN DEFAULT TRUE COMMENT '허용된 확장자 여부',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '생성 시간',
-    
+
     INDEX idx_extension (extension),
     INDEX idx_mime_type (mime_type),
     INDEX idx_is_allowed (is_allowed),
@@ -99,13 +99,13 @@ CREATE TABLE file_views (
     view_type ENUM('info', 'preview', 'download') NOT NULL COMMENT '조회 타입',
     session_id VARCHAR(100) COMMENT '세션 ID',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '조회 시간',
-    
+
     INDEX idx_file_id (file_id),
     INDEX idx_viewer_ip (viewer_ip),
     INDEX idx_view_type (view_type),
     INDEX idx_created_at (created_at),
     INDEX idx_session_id (session_id),
-    
+
     FOREIGN KEY (file_id) REFERENCES files(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 COMMENT='파일 조회 기록';
@@ -123,13 +123,13 @@ CREATE TABLE file_downloads (
     download_duration_ms INT UNSIGNED COMMENT '다운로드 소요 시간 (ms)',
     session_id VARCHAR(100) COMMENT '세션 ID',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '다운로드 시간',
-    
+
     INDEX idx_file_id (file_id),
     INDEX idx_downloader_ip (downloader_ip),
     INDEX idx_download_method (download_method),
     INDEX idx_created_at (created_at),
     INDEX idx_session_id (session_id),
-    
+
     FOREIGN KEY (file_id) REFERENCES files(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 COMMENT='파일 다운로드 기록';
@@ -148,14 +148,14 @@ CREATE TABLE file_uploads (
     error_message TEXT COMMENT '에러 메시지',
     session_id VARCHAR(100) COMMENT '세션 ID',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '업로드 시간',
-    
+
     INDEX idx_file_id (file_id),
     INDEX idx_uploader_ip (uploader_ip),
     INDEX idx_upload_method (upload_method),
     INDEX idx_upload_status (upload_status),
     INDEX idx_created_at (created_at),
     INDEX idx_session_id (session_id),
-    
+
     FOREIGN KEY (file_id) REFERENCES files(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 COMMENT='파일 업로드 기록';
@@ -170,7 +170,7 @@ CREATE TABLE file_tags (
     color VARCHAR(7) COMMENT '태그 색상 (HEX)',
     usage_count INT UNSIGNED DEFAULT 0 COMMENT '사용 횟수',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '생성 시간',
-    
+
     INDEX idx_name (name),
     INDEX idx_usage_count (usage_count)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
@@ -184,11 +184,11 @@ CREATE TABLE file_tag_relations (
     file_id BIGINT UNSIGNED NOT NULL COMMENT '파일 ID',
     tag_id INT UNSIGNED NOT NULL COMMENT '태그 ID',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '연결 시간',
-    
+
     UNIQUE KEY unique_file_tag (file_id, tag_id),
     INDEX idx_file_id (file_id),
     INDEX idx_tag_id (tag_id),
-    
+
     FOREIGN KEY (file_id) REFERENCES files(id) ON DELETE CASCADE,
     FOREIGN KEY (tag_id) REFERENCES file_tags(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
@@ -205,7 +205,7 @@ CREATE TABLE system_settings (
     description TEXT COMMENT '설정 설명',
     is_public BOOLEAN DEFAULT FALSE COMMENT '공개 설정 여부',
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '수정 시간',
-    
+
     INDEX idx_setting_key (setting_key),
     INDEX idx_is_public (is_public)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
@@ -215,7 +215,7 @@ COMMENT='시스템 설정 정보';
 -- 10. 통계 뷰 (성능 최적화용)
 -- =====================================================
 CREATE VIEW file_statistics AS
-SELECT 
+SELECT
     f.id,
     f.file_uuid,
     f.original_filename,
@@ -353,4 +353,4 @@ FLUSH PRIVILEGES;
 -- =====================================================
 -- 완료 메시지
 -- =====================================================
-SELECT 'FileWallBall Database Schema created successfully!' as status; 
+SELECT 'FileWallBall Database Schema created successfully!' as status;

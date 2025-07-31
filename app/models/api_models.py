@@ -2,13 +2,15 @@
 API 응답 모델
 """
 
-from typing import Optional, List, Dict, Any
 from datetime import datetime
+from typing import Any, Dict, List, Optional
+
 from pydantic import BaseModel, Field
 
 
 class SuccessResponse(BaseModel):
     """성공 응답 기본 모델"""
+
     status: str = Field(default="success", description="응답 상태")
     message: str = Field(description="응답 메시지")
     timestamp: datetime = Field(default_factory=datetime.now, description="응답 시간")
@@ -17,6 +19,7 @@ class SuccessResponse(BaseModel):
 
 class ErrorResponse(BaseModel):
     """에러 응답 기본 모델"""
+
     status: str = Field(default="error", description="응답 상태")
     error_type: str = Field(description="에러 타입")
     error_message: str = Field(description="에러 메시지")
@@ -24,11 +27,14 @@ class ErrorResponse(BaseModel):
     is_retryable: bool = Field(description="재시도 가능 여부")
     file_uuid: Optional[str] = Field(default=None, description="파일 UUID")
     error_id: Optional[str] = Field(default=None, description="에러 ID")
-    timestamp: datetime = Field(default_factory=datetime.now, description="에러 발생 시간")
+    timestamp: str = Field(
+        default_factory=lambda: datetime.now().isoformat(), description="에러 발생 시간"
+    )
 
 
 class FileUploadResponse(BaseModel):
     """파일 업로드 성공 응답"""
+
     status: str = Field(default="success", description="응답 상태")
     file_uuid: str = Field(description="파일 UUID")
     original_filename: str = Field(description="원본 파일명")
@@ -50,16 +56,20 @@ class FileUploadResponse(BaseModel):
 
 class FileDuplicateResponse(BaseModel):
     """중복 파일 응답"""
+
     status: str = Field(default="duplicate", description="응답 상태")
     file_uuid: str = Field(description="기존 파일 UUID")
     message: str = Field(description="중복 파일 메시지")
     duplicate: bool = Field(default=True, description="중복 여부")
-    existing_file_info: Optional[Dict[str, Any]] = Field(default=None, description="기존 파일 정보")
+    existing_file_info: Optional[Dict[str, Any]] = Field(
+        default=None, description="기존 파일 정보"
+    )
     timestamp: datetime = Field(default_factory=datetime.now, description="응답 시간")
 
 
 class FileInfoResponse(BaseModel):
     """파일 정보 응답"""
+
     file_id: str = Field(description="파일 ID")
     filename: str = Field(description="파일명")
     size: int = Field(description="파일 크기")
@@ -72,6 +82,7 @@ class FileInfoResponse(BaseModel):
 
 class UploadStatisticsResponse(BaseModel):
     """업로드 통계 응답"""
+
     client_ip: str = Field(description="클라이언트 IP")
     period_days: int = Field(description="통계 기간 (일)")
     total_uploads: int = Field(description="총 업로드 수")
@@ -83,6 +94,7 @@ class UploadStatisticsResponse(BaseModel):
 
 class RateLimitInfo(BaseModel):
     """Rate Limit 정보"""
+
     limit: int = Field(description="제한 수")
     remaining: int = Field(description="남은 요청 수")
     reset_time: int = Field(description="리셋 시간 (Unix timestamp)")
@@ -91,6 +103,7 @@ class RateLimitInfo(BaseModel):
 
 class HealthCheckResponse(BaseModel):
     """헬스체크 응답"""
+
     status: str = Field(description="서비스 상태")
     timestamp: datetime = Field(default_factory=datetime.now, description="체크 시간")
     services: Dict[str, str] = Field(description="서비스별 상태")
@@ -100,17 +113,23 @@ class HealthCheckResponse(BaseModel):
 
 class MetricsResponse(BaseModel):
     """메트릭 응답"""
+
     file_uploads_total: int = Field(description="총 업로드 수")
     file_downloads_total: int = Field(description="총 다운로드 수")
-    file_upload_errors_total: Dict[str, int] = Field(description="에러별 업로드 실패 수")
+    file_upload_errors_total: Dict[str, int] = Field(
+        description="에러별 업로드 실패 수"
+    )
     average_upload_duration: float = Field(description="평균 업로드 시간 (초)")
     active_uploads: int = Field(description="현재 활성 업로드 수")
     storage_usage: Dict[str, Any] = Field(description="저장소 사용량")
-    timestamp: datetime = Field(default_factory=datetime.now, description="메트릭 수집 시간")
+    timestamp: datetime = Field(
+        default_factory=datetime.now, description="메트릭 수집 시간"
+    )
 
 
 class ErrorStatisticsResponse(BaseModel):
     """에러 통계 응답"""
+
     period_days: int = Field(description="통계 기간 (일)")
     total_errors: int = Field(description="총 에러 수")
     error_types: Dict[str, int] = Field(description="에러 타입별 발생 수")
@@ -122,6 +141,7 @@ class ErrorStatisticsResponse(BaseModel):
 
 class PaginatedResponse(BaseModel):
     """페이지네이션 응답"""
+
     items: List[Any] = Field(description="아이템 목록")
     total: int = Field(description="총 아이템 수")
     page: int = Field(description="현재 페이지")
@@ -134,6 +154,7 @@ class PaginatedResponse(BaseModel):
 
 class IPAuthResponse(BaseModel):
     """IP 인증 응답"""
+
     success: bool = Field(description="성공 여부")
     file_uuid: str = Field(description="파일 UUID")
     original_filename: str = Field(description="원본 파일명")
@@ -143,4 +164,4 @@ class IPAuthResponse(BaseModel):
     processing_time_ms: int = Field(description="처리 시간 (밀리초)")
     auth_method: str = Field(default="ip_based", description="인증 방법")
     client_ip: str = Field(description="클라이언트 IP")
-    timestamp: datetime = Field(default_factory=datetime.now, description="응답 시간") 
+    timestamp: datetime = Field(default_factory=datetime.now, description="응답 시간")

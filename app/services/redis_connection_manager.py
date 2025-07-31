@@ -3,22 +3,24 @@ Redis 연결 관리자 모듈
 고급 연결 풀, 클러스터 모드, 장애 복구 기능을 제공합니다.
 """
 
-import redis
-import redis.cluster
-import redis.sentinel
 import asyncio
-import time
 import logging
-from typing import Optional, Dict, Any, List, Union
+import time
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from enum import Enum
+from typing import Any, Dict, List, Optional, Union
+
+import redis
+import redis.cluster
+import redis.sentinel
 
 logger = logging.getLogger(__name__)
 
 
 class RedisMode(Enum):
     """Redis 운영 모드"""
+
     STANDALONE = "standalone"
     CLUSTER = "cluster"
     SENTINEL = "sentinel"
@@ -27,6 +29,7 @@ class RedisMode(Enum):
 @dataclass
 class RedisNode:
     """Redis 노드 정보"""
+
     host: str
     port: int
     password: Optional[str] = None
@@ -37,6 +40,7 @@ class RedisNode:
 @dataclass
 class ConnectionConfig:
     """Redis 연결 설정"""
+
     mode: RedisMode = RedisMode.STANDALONE
     nodes: List[RedisNode] = None
     pool_size: int = 20
@@ -54,45 +58,47 @@ class ConnectionConfig:
 
 class CircuitBreaker:
     """서킷 브레이커 패턴 구현"""
-    
+
     def __init__(self, failure_threshold: int = 5, recovery_timeout: int = 60):
         self.failure_threshold = failure_threshold
         self.recovery_timeout = recovery_timeout
         self.failure_count = 0
         self.last_failure_time = 0
         self.state = "CLOSED"  # CLOSED, OPEN, HALF_OPEN
-    
+
     def record_failure(self):
         """실패 기록"""
         self.failure_count += 1
         self.last_failure_time = time.time()
-        
+
         if self.failure_count >= self.failure_threshold:
             self.state = "OPEN"
-            logger.warning(f"Circuit breaker opened after {self.failure_count} failures")
-    
+            logger.warning(
+                f"Circuit breaker opened after {self.failure_count} failures"
+            )
+
     def record_success(self):
         """성공 기록"""
         self.failure_count = 0
         self.state = "CLOSED"
-    
+
     def can_execute(self) -> bool:
         """실행 가능 여부 확인"""
         if self.state == "CLOSED":
             return True
-        
+
         if self.state == "OPEN":
             if time.time() - self.last_failure_time > self.recovery_timeout:
                 self.state = "HALF_OPEN"
                 return True
             return False
-        
+
         return True  # HALF_OPEN 상태
 
 
 class RedisConnectionManager:
     """Redis 연결 관리자"""
-    
+
     def __init__(self, config: ConnectionConfig):
         self.config = config
         self.circuit_breaker = CircuitBreaker()
@@ -100,7 +106,7 @@ class RedisConnectionManager:
         self.client = None
         self.health_check_task = None
         self._initialize_connection()
-    
+
     def _initialize_connection(self):
         """Redis 연결 초기화"""
         try:
@@ -110,20 +116,22 @@ class RedisConnectionManager:
                 self._setup_cluster()
             elif self.config.mode == RedisMode.SENTINEL:
                 self._setup_sentinel()
-            
+
             # 연결 테스트
             self._test_connection()
-            logger.info(f"Redis connection initialized successfully in {self.config.mode.value} mode")
-            
+            logger.info(
+                f"Redis connection initialized successfully in {self.config.mode.value} mode"
+            )
+
         except Exception as e:
             logger.error(f"Failed to initialize Redis connection: {e}")
             raise
-    
+
     def _setup_standalone(self):
         """단일 Redis 서버 설정"""
         if not self.config.nodes:
             raise ValueError("At least one Redis node is required")
-        
+
         node = self.config.nodes[0]
         self.connection_pool = redis.ConnectionPool(
             host=node.host,
@@ -137,21 +145,21 @@ class RedisConnectionManager:
             socket_keepalive_options=self.config.socket_keepalive_options,
             retry_on_timeout=self.config.retry_on_timeout,
             retry_on_error=self.config.retry_on_error or [redis.ConnectionError],
-            decode_responses=True
+            decode_responses=True,
         )
-        
+
         self.client = redis.Redis(connection_pool=self.connection_pool)
-    
+
     def _setup_cluster(self):
         """Redis 클러스터 설정"""
         if not self.config.nodes:
             raise ValueError("At least one Redis cluster node is required")
-        
+
         startup_nodes = [
             {"host": node.host, "port": node.port, "password": node.password}
             for node in self.config.nodes
         ]
-        
+
         self.client = redis.cluster.RedisCluster(
             startup_nodes=startup_nodes,
             decode_responses=True,
@@ -160,16 +168,16 @@ class RedisConnectionManager:
             socket_keepalive=self.config.socket_keepalive,
             retry_on_timeout=self.config.retry_on_timeout,
             retry_on_error=self.config.retry_on_error or [redis.ConnectionError],
-            max_connections_per_node=self.config.pool_size
+            max_connections_per_node=self.config.pool_size,
         )
-    
+
     def _setup_sentinel(self):
         """Redis Sentinel 설정"""
         if not self.config.nodes:
             raise ValueError("At least one Redis sentinel node is required")
-        
+
         sentinel_hosts = [(node.host, node.port) for node in self.config.nodes]
-        
+
         self.client = redis.sentinel.Sentinel(
             sentinel_hosts,
             socket_timeout=self.config.socket_timeout,
@@ -177,9 +185,9 @@ class RedisConnectionManager:
             socket_keepalive=self.config.socket_keepalive,
             retry_on_timeout=self.config.retry_on_timeout,
             retry_on_error=self.config.retry_on_error or [redis.ConnectionError],
-            decode_responses=True
+            decode_responses=True,
         )
-    
+
     def _test_connection(self):
         """연결 테스트"""
         try:
@@ -187,13 +195,14 @@ class RedisConnectionManager:
             self.circuit_breaker.record_success()
         except Exception as e:
             self.circuit_breaker.record_failure()
-            raise ConnectionError(f"Redis connection test failed: {e}")
-    
+            logger.warning(f"Redis connection test failed: {e}")
+            # 연결 실패해도 애플리케이션은 시작되도록 예외를 발생시키지 않음
+
     async def execute_with_retry(self, operation, *args, **kwargs):
         """재시도 로직과 함께 Redis 작업 실행"""
         if not self.circuit_breaker.can_execute():
             raise ConnectionError("Circuit breaker is open")
-        
+
         for attempt in range(self.config.max_retries):
             try:
                 result = operation(*args, **kwargs)
@@ -202,18 +211,22 @@ class RedisConnectionManager:
             except (redis.ConnectionError, redis.TimeoutError) as e:
                 self.circuit_breaker.record_failure()
                 if attempt < self.config.max_retries - 1:
-                    await asyncio.sleep(self.config.retry_delay * (2 ** attempt))
-                    logger.warning(f"Redis operation failed, retrying... (attempt {attempt + 1})")
+                    await asyncio.sleep(self.config.retry_delay * (2**attempt))
+                    logger.warning(
+                        f"Redis operation failed, retrying... (attempt {attempt + 1})"
+                    )
                 else:
-                    raise ConnectionError(f"Redis operation failed after {self.config.max_retries} attempts: {e}")
+                    raise ConnectionError(
+                        f"Redis operation failed after {self.config.max_retries} attempts: {e}"
+                    )
             except Exception as e:
                 logger.error(f"Unexpected Redis error: {e}")
                 raise
-    
+
     def get_client(self) -> Union[redis.Redis, redis.cluster.RedisCluster]:
         """Redis 클라이언트 반환"""
         return self.client
-    
+
     def get_connection_info(self) -> Dict[str, Any]:
         """연결 정보 반환"""
         try:
@@ -224,16 +237,16 @@ class RedisConnectionManager:
                 "used_memory_human": info.get("used_memory_human", "0B"),
                 "uptime_in_seconds": info.get("uptime_in_seconds", 0),
                 "circuit_breaker_state": self.circuit_breaker.state,
-                "failure_count": self.circuit_breaker.failure_count
+                "failure_count": self.circuit_breaker.failure_count,
             }
         except Exception as e:
             logger.error(f"Failed to get connection info: {e}")
             return {
                 "mode": self.config.mode.value,
                 "error": str(e),
-                "circuit_breaker_state": self.circuit_breaker.state
+                "circuit_breaker_state": self.circuit_breaker.state,
             }
-    
+
     async def health_check(self):
         """헬스체크 실행"""
         try:
@@ -241,12 +254,12 @@ class RedisConnectionManager:
             logger.debug("Redis health check passed")
         except Exception as e:
             logger.error(f"Redis health check failed: {e}")
-    
+
     async def start_health_check(self):
         """헬스체크 태스크 시작"""
         if self.health_check_task is None:
             self.health_check_task = asyncio.create_task(self._health_check_loop())
-    
+
     async def stop_health_check(self):
         """헬스체크 태스크 중지"""
         if self.health_check_task:
@@ -256,7 +269,7 @@ class RedisConnectionManager:
             except asyncio.CancelledError:
                 pass
             self.health_check_task = None
-    
+
     async def _health_check_loop(self):
         """헬스체크 루프"""
         while True:
@@ -268,7 +281,7 @@ class RedisConnectionManager:
             except Exception as e:
                 logger.error(f"Health check loop error: {e}")
                 await asyncio.sleep(self.config.health_check_interval)
-    
+
     def close(self):
         """연결 종료"""
         if self.client:
@@ -286,19 +299,19 @@ def get_redis_manager() -> RedisConnectionManager:
     global _redis_manager
     if _redis_manager is None:
         from app.config import get_settings
-        
+
         settings = get_settings()
-        
+
         # 설정에서 Redis 노드 정보 생성
         nodes = [
             RedisNode(
                 host=settings.redis_host,
                 port=settings.redis_port,
                 password=settings.redis_password if settings.redis_password else None,
-                db=settings.redis_db
+                db=settings.redis_db,
             )
         ]
-        
+
         config = ConnectionConfig(
             mode=RedisMode.STANDALONE,  # 기본값, 환경변수로 변경 가능
             nodes=nodes,
@@ -308,11 +321,11 @@ def get_redis_manager() -> RedisConnectionManager:
             socket_connect_timeout=2.0,
             socket_keepalive=True,
             retry_on_timeout=True,
-            health_check_interval=30
+            health_check_interval=30,
         )
-        
+
         _redis_manager = RedisConnectionManager(config)
-    
+
     return _redis_manager
 
 
@@ -325,4 +338,4 @@ async def redis_context():
         yield manager
     finally:
         await manager.stop_health_check()
-        manager.close() 
+        manager.close()

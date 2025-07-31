@@ -65,4 +65,4 @@ kubectl get hpa -n filewallball
 echo ""
 echo "🔗 접속 정보:"
 echo "API Base URL: http://filewallball-service.filewallball.svc.cluster.local:8000"
-echo "LoadBalancer IP: $(kubectl get svc filewallball-ingress -n filewallball -o jsonpath='{.status.loadBalancer.ingress[0].ip}')" 
+echo "LoadBalancer IP: $(kubectl get svc filewallball-ingress -n filewallball -o jsonpath='{.status.loadBalancer.ingress[0].ip}')"

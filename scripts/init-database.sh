@@ -36,4 +36,4 @@ SHOW TABLES;
 SELECT COUNT(*) as file_count FROM files;
 SELECT COUNT(*) as view_count FROM file_views;
 SELECT COUNT(*) as download_count FROM file_downloads;
-" 
+"

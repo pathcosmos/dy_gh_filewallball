@@ -1,54 +1,11 @@
 # Task ID: 9
-# Title: Docker 컨테이너화 및 Kubernetes 배포
-# Status: pending
+# Title: Prometheus 메트릭 및 모니터링 시스템
+# Status: done
 # Dependencies: 8
-# Priority: high
-# Description: Dockerfile 작성, 컨테이너 이미지 빌드, Kubernetes 매니페스트 작성
+# Priority: medium
+# Description: 상세한 성능 메트릭, 헬스체크, 에러 통계를 위한 Prometheus 모니터링 시스템을 구현합니다.
 # Details:
-Dockerfile:
-```dockerfile
-FROM python:3.11-slim
-
-WORKDIR /app
-
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-
-COPY app/ ./app/
-
-EXPOSE 8000
-
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
-```
-
-Kubernetes Deployment:
-```yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: filewallball-api
-  namespace: filewallball
-spec:
-  replicas: 2
-  selector:
-    matchLabels:
-      app: filewallball-api
-  template:
-    spec:
-      containers:
-      - name: api
-        image: filewallball-api:latest
-        ports:
-        - containerPort: 8000
-        resources:
-          requests:
-            cpu: 100m
-            memory: 128Mi
-          limits:
-            cpu: 200m
-            memory: 256Mi
-```
-Service, Ingress 설정
+prometheus-client 사용하여 커스텀 메트릭 구현: http_requests_total (Counter), http_request_duration_seconds (Histogram), active_uploads (Gauge), file_upload_errors_total (Counter). FastAPI 미들웨어로 자동 메트릭 수집. 헬스체크 엔드포인트: GET /health (DB, Redis 연결 상태). 비즈니스 메트릭: 파일 업로드/다운로드 수, 스토리지 사용량, 사용자별 활동. /metrics 엔드포인트 노출.
 
 # Test Strategy:
-컨테이너 빌드 및 실행 테스트, Kubernetes 배포 검증, 서비스 디스커버리 테스트, 리소스 제한 확인
+메트릭 수집 정확성 테스트, 헬스체크 엔드포인트 테스트, Prometheus 스크래핑 테스트, 메트릭 레이블 정확성 검증, 성능 오버헤드 측정

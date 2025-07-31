@@ -24,8 +24,34 @@ node_modules/
 # OS specific
 .DS_Store
 
+# Python uv
+.uv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
 
 .taskmaster/config.json
 
 .cursor/mcp.json
 
+
+# Task files
+# tasks.json
+# tasks/

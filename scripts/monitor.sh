@@ -39,4 +39,4 @@ kubectl get pvc -n filewallball
 
 echo ""
 echo "9. 이벤트 확인:"
-kubectl get events -n filewallball --sort-by='.lastTimestamp' | tail -10 
+kubectl get events -n filewallball --sort-by='.lastTimestamp' | tail -10

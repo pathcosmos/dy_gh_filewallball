@@ -116,7 +116,7 @@ SET GLOBAL performance_schema = ON;
 -- =====================================================
 
 -- 인덱스 사용 통계 확인
-SELECT 
+SELECT
     TABLE_NAME,
     INDEX_NAME,
     CARDINALITY,
@@ -124,12 +124,12 @@ SELECT
     PACKED,
     NULLABLE,
     INDEX_TYPE
-FROM information_schema.STATISTICS 
-WHERE TABLE_SCHEMA = 'filewallball_db' 
+FROM information_schema.STATISTICS
+WHERE TABLE_SCHEMA = 'filewallball_db'
 ORDER BY TABLE_NAME, INDEX_NAME;
 
 -- =====================================================
 -- 10. 성능 최적화 완료 메시지
 -- =====================================================
 
-SELECT 'FileWallBall Performance Optimization completed successfully!' as status; 
+SELECT 'FileWallBall Performance Optimization completed successfully!' as status;

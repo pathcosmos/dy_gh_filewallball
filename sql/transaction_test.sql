@@ -17,12 +17,12 @@ SELECT @@tx_isolation as current_isolation;
 -- =====================================================
 
 SELECT '=== 생성된 트리거 목록 ===' as info;
-SELECT 
+SELECT
     TRIGGER_NAME,
     EVENT_MANIPULATION,
     EVENT_OBJECT_TABLE,
     ACTION_TIMING
-FROM information_schema.TRIGGERS 
+FROM information_schema.TRIGGERS
 WHERE TRIGGER_SCHEMA = 'filewallball_db'
 ORDER BY TRIGGER_NAME;
 
@@ -31,11 +31,11 @@ ORDER BY TRIGGER_NAME;
 -- =====================================================
 
 SELECT '=== 생성된 프로시저 목록 ===' as info;
-SELECT 
+SELECT
     ROUTINE_NAME,
     ROUTINE_TYPE,
     DATA_TYPE
-FROM information_schema.ROUTINES 
+FROM information_schema.ROUTINES
 WHERE ROUTINE_SCHEMA = 'filewallball_db'
 ORDER BY ROUTINE_NAME;
 
@@ -44,11 +44,11 @@ ORDER BY ROUTINE_NAME;
 -- =====================================================
 
 SELECT '=== 생성된 함수 목록 ===' as info;
-SELECT 
+SELECT
     ROUTINE_NAME,
     ROUTINE_TYPE,
     DATA_TYPE
-FROM information_schema.ROUTINES 
+FROM information_schema.ROUTINES
 WHERE ROUTINE_SCHEMA = 'filewallball_db'
 AND ROUTINE_TYPE = 'FUNCTION'
 ORDER BY ROUTINE_NAME;
@@ -62,8 +62,8 @@ SELECT '=== 테스트 1: 파일 크기 제약 조건 ===' as info;
 
 -- 정상적인 파일 크기 (성공해야 함)
 INSERT INTO files (
-    file_uuid, original_filename, stored_filename, 
-    file_extension, mime_type, file_size, file_hash, 
+    file_uuid, original_filename, stored_filename,
+    file_extension, mime_type, file_size, file_hash,
     storage_path, is_public
 ) VALUES (
     'test-uuid-1', 'test.txt', 'test_1.txt',
@@ -74,8 +74,8 @@ INSERT INTO files (
 -- 잘못된 파일 크기 (실패해야 함)
 SELECT '=== 잘못된 파일 크기 테스트 (실패 예상) ===' as info;
 INSERT INTO files (
-    file_uuid, original_filename, stored_filename, 
-    file_extension, mime_type, file_size, file_hash, 
+    file_uuid, original_filename, stored_filename,
+    file_extension, mime_type, file_size, file_hash,
     storage_path, is_public
 ) VALUES (
     'test-uuid-2', 'test.txt', 'test_2.txt',
@@ -89,8 +89,8 @@ SELECT '=== 테스트 2: 파일 해시 제약 조건 ===' as info;
 -- 잘못된 해시 길이 (실패해야 함)
 SELECT '=== 잘못된 해시 길이 테스트 (실패 예상) ===' as info;
 INSERT INTO files (
-    file_uuid, original_filename, stored_filename, 
-    file_extension, mime_type, file_size, file_hash, 
+    file_uuid, original_filename, stored_filename,
+    file_extension, mime_type, file_size, file_hash,
     storage_path, is_public
 ) VALUES (
     'test-uuid-3', 'test.txt', 'test_3.txt',
@@ -104,8 +104,8 @@ SELECT '=== 테스트 3: 허용되지 않은 확장자 ===' as info;
 -- 허용되지 않은 확장자 (실패해야 함)
 SELECT '=== 허용되지 않은 확장자 테스트 (실패 예상) ===' as info;
 INSERT INTO files (
-    file_uuid, original_filename, stored_filename, 
-    file_extension, mime_type, file_size, file_hash, 
+    file_uuid, original_filename, stored_filename,
+    file_extension, mime_type, file_size, file_hash,
     storage_path, is_public
 ) VALUES (
     'test-uuid-4', 'test.exe', 'test_4.exe',
@@ -174,8 +174,8 @@ START TRANSACTION;
 
 -- 트랜잭션 내에서 데이터 삽입
 INSERT INTO files (
-    file_uuid, original_filename, stored_filename, 
-    file_extension, mime_type, file_size, file_hash, 
+    file_uuid, original_filename, stored_filename,
+    file_extension, mime_type, file_size, file_hash,
     storage_path, is_public
 ) VALUES (
     'rollback-test', 'rollback.txt', 'rollback_test.txt',
@@ -210,14 +210,14 @@ SELECT '=== 최종 테스트 결과 ===' as info;
 SELECT 'ACID 트랜잭션 및 데이터 무결성 테스트가 성공적으로 완료되었습니다!' as status;
 
 -- 생성된 객체들 확인
-SELECT '트리거 수' as object_type, COUNT(*) as count 
-FROM information_schema.TRIGGERS 
+SELECT '트리거 수' as object_type, COUNT(*) as count
+FROM information_schema.TRIGGERS
 WHERE TRIGGER_SCHEMA = 'filewallball_db'
 UNION ALL
-SELECT '프로시저 수', COUNT(*) 
-FROM information_schema.ROUTINES 
+SELECT '프로시저 수', COUNT(*)
+FROM information_schema.ROUTINES
 WHERE ROUTINE_SCHEMA = 'filewallball_db' AND ROUTINE_TYPE = 'PROCEDURE'
 UNION ALL
-SELECT '함수 수', COUNT(*) 
-FROM information_schema.ROUTINES 
-WHERE ROUTINE_SCHEMA = 'filewallball_db' AND ROUTINE_TYPE = 'FUNCTION'; 
+SELECT '함수 수', COUNT(*)
+FROM information_schema.ROUTINES
+WHERE ROUTINE_SCHEMA = 'filewallball_db' AND ROUTINE_TYPE = 'FUNCTION';

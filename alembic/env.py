@@ -5,8 +5,7 @@ Alembic environment configuration for FileWallBall application.
 import os
 from logging.config import fileConfig
 
-from sqlalchemy import engine_from_config
-from sqlalchemy import pool
+from sqlalchemy import engine_from_config, pool
 
 from alembic import context
 
@@ -19,10 +18,11 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
+from app.models.database_enhanced import enhanced_db_manager
+
 # add your model's MetaData object here
 # for 'autogenerate' support
 from app.models.orm_models import Base
-from app.models.database_enhanced import enhanced_db_manager
 
 # target_metadata = mymodel.Base.metadata
 target_metadata = Base.metadata
@@ -36,17 +36,17 @@ target_metadata = Base.metadata
 def get_database_url():
     """환경 변수에서 데이터베이스 URL 가져오기"""
     # 로컬 개발 환경에서는 SQLite 사용
-    if os.getenv('ENVIRONMENT', 'development') == 'development':
-        db_name = os.getenv('DB_NAME', 'filewallball.db')
+    if os.getenv("ENVIRONMENT", "development") == "development":
+        db_name = os.getenv("DB_NAME", "filewallball.db")
         return f"sqlite:///./{db_name}"
-    
+
     # 프로덕션 환경에서는 MariaDB 사용
-    db_host = os.getenv('DB_HOST', 'mariadb-service')
-    db_port = os.getenv('DB_PORT', '3306')
-    db_name = os.getenv('DB_NAME', 'filewallball_db')
-    db_user = os.getenv('DB_USER', 'filewallball_user')
-    db_password = os.getenv('DB_PASSWORD', 'filewallball_user_password')
-    
+    db_host = os.getenv("DB_HOST", "mariadb-service")
+    db_port = os.getenv("DB_PORT", "3306")
+    db_name = os.getenv("DB_NAME", "filewallball_db")
+    db_user = os.getenv("DB_USER", "filewallball_user")
+    db_password = os.getenv("DB_PASSWORD", "filewallball_user_password")
+
     return f"mysql+pymysql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
 
 
@@ -63,9 +63,9 @@ def run_migrations_offline() -> None:
 
     """
     url = get_database_url()
-    
+
     # SQLite와 MariaDB에 따른 설정 분기
-    if url.startswith('sqlite'):
+    if url.startswith("sqlite"):
         context.configure(
             url=url,
             target_metadata=target_metadata,
@@ -97,12 +97,12 @@ def run_migrations_online() -> None:
     """
     # 환경 변수에서 데이터베이스 URL 가져오기
     url = get_database_url()
-    
+
     # 설정에 URL 추가
     config.set_main_option("sqlalchemy.url", url)
-    
+
     # SQLite와 MariaDB에 따른 설정 분기
-    if url.startswith('sqlite'):
+    if url.startswith("sqlite"):
         connectable = engine_from_config(
             config.get_section(config.config_ini_section, {}),
             prefix="sqlalchemy.",
@@ -117,13 +117,13 @@ def run_migrations_online() -> None:
             connect_args={
                 "charset": "utf8mb4",
                 "autocommit": False,
-                "sql_mode": "STRICT_TRANS_TABLES,NO_ZERO_DATE,NO_ZERO_IN_DATE,ERROR_FOR_DIVISION_BY_ZERO"
-            }
+                "sql_mode": "STRICT_TRANS_TABLES,NO_ZERO_DATE,NO_ZERO_IN_DATE,ERROR_FOR_DIVISION_BY_ZERO",
+            },
         )
 
     with connectable.connect() as connection:
         # SQLite와 MariaDB에 따른 설정 분기
-        if url.startswith('sqlite'):
+        if url.startswith("sqlite"):
             context.configure(
                 connection=connection,
                 target_metadata=target_metadata,

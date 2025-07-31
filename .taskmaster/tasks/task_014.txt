@@ -1,0 +1,126 @@
+# Task ID: 14
+# Title: Kubernetes 매니페스트 및 배포 설정
+# Status: done
+# Dependencies: 13
+# Priority: high
+# Description: MicroK8s 환경에서 애플리케이션 배포를 위한 Kubernetes 매니페스트를 작성합니다.
+# Details:
+K8s 리소스 작성: Deployment (replicas: 2), Service (ClusterIP), ConfigMap (환경 설정), Secret (민감 정보). PersistentVolume: 파일 스토리지용 hostPath 또는 local-path. HPA 설정: CPU 70%, 메모리 80% 임계값, min: 2, max: 10 replicas. Ingress: nginx-ingress 사용, SSL 터미네이션. 네임스페이스: fileWallBall 전용 네임스페이스. 리소스 제한: requests/limits 설정.
+
+# Test Strategy:
+매니페스트 문법 검증, MicroK8s 배포 테스트, 서비스 디스커버리 테스트, PV/PVC 마운트 테스트, HPA 스케일링 테스트
+
+# Subtasks:
+## 1. 네임스페이스 및 기본 리소스 설정 [done]
+### Dependencies: None
+### Description: fileWallBall 전용 네임스페이스를 생성하고 기본 Kubernetes 리소스를 설정합니다.
+### Details:
+fileWallBall 네임스페이스 생성 매니페스트 작성. ResourceQuota 설정: CPU, 메모리, PVC 제한. LimitRange 설정: 컨테이너별 기본 requests/limits 정의. NetworkPolicy 설정: 네임스페이스 내부 통신 정책. RBAC 설정: ServiceAccount 및 Role/RoleBinding 구성.
+<info added on 2025-07-30T09:07:08.992Z>
+환경 설정 완료 상태 업데이트:
+- MicroK8s 설치 및 실행 확인 완료
+- kubectl 설치 및 설정 완료
+- 클러스터 상태 확인: localhost 노드 Ready 상태 확인
+- 필요한 애드온 활성화 완료: dashboard, dns, ingress, metrics-server, storage 등
+
+작업 진행 계획:
+1. fileWallBall 네임스페이스 생성 매니페스트 작성 준비
+2. ResourceQuota 및 LimitRange 설정 준비
+3. NetworkPolicy 및 RBAC 구성 준비
+4. 매니페스트 검증 및 배포 계획 수립
+
+다음 단계로 네임스페이스 생성 매니페스트 작성 및 기본 리소스 설정 작업을 시작할 준비가 완료되었습니다.
+</info added on 2025-07-30T09:07:08.992Z>
+<info added on 2025-07-30T09:08:56.660Z>
+네임스페이스 및 기본 리소스 설정 완료 상태 업데이트:
+
+구현 완료된 리소스:
+1. fileWallBall 네임스페이스 생성 완료
+2. ResourceQuota 설정 완료: CPU 4/8, Memory 8Gi/16Gi, PVC 5개, Pod 20개 제한
+3. LimitRange 설정 완료: Container (100m/500m CPU, 128Mi/512Mi Memory), Pod (200m/1 CPU, 256Mi/1Gi Memory)
+4. ServiceAccount 생성 완료: filewallball-sa
+5. Role/RoleBinding 설정 완료: 네임스페이스 내 리소스 관리 권한
+6. NetworkPolicy 설정 완료: 네임스페이스 내부 통신 정책 (포트 8000, 8080)
+
+검증 결과:
+- 매니페스트 문법 검증 통과
+- 모든 리소스 정상 생성 확인
+- ResourceQuota 및 LimitRange 적용 확인
+- RBAC 설정 정상 작동
+- NetworkPolicy 정상 생성
+
+작업 상태: 완료
+다음 단계: ConfigMap 및 Secret 리소스 구성으로 진행 준비 완료
+</info added on 2025-07-30T09:08:56.660Z>
+
+## 2. ConfigMap 및 Secret 리소스 구성 [done]
+### Dependencies: 14.1
+### Description: 애플리케이션 환경 설정을 위한 ConfigMap과 민감 정보 관리를 위한 Secret을 작성합니다.
+### Details:
+ConfigMap 작성: 데이터베이스 호스트, Redis 호스트, 로깅 레벨, 업로드 제한 설정. Secret 작성: 데이터베이스 비밀번호, JWT 시크릿 키, S3 자격증명. 환경별 설정 분리: dev/staging/prod ConfigMap. Secret 암호화: SealedSecret 또는 SOPS 사용 검토. 마운트 설정: 볼륨 마운트 경로 정의.
+<info added on 2025-07-30T09:09:10.522Z>
+환경 분석 완료:
+- filewallball 네임스페이스 내 기존 리소스 현황 파악
+- MariaDB, Redis, Redis Sentinel 서비스 운영 상태 확인
+- 기존 ConfigMap/Secret 리소스 목록 및 설정 내용 검토
+
+작업 진행 계획:
+1. kubectl get configmaps,secrets -n filewallball 명령으로 기존 리소스 확인
+2. 애플리케이션별 ConfigMap 작성 (데이터베이스 연결 정보, Redis 설정, 로깅 레벨)
+3. 민감 정보 Secret 작성 (DB 패스워드, JWT 키, API 키)
+4. 환경별 설정 분리를 위한 dev/staging/prod ConfigMap 구조 설계
+5. 매니페스트 파일 작성 후 kubectl apply --dry-run으로 검증
+6. 단계별 배포 및 애플리케이션 연동 테스트
+</info added on 2025-07-30T09:09:10.522Z>
+<info added on 2025-07-30T09:14:31.668Z>
+ConfigMap 및 Secret 리소스 구성 완료:
+
+구현된 리소스들:
+1. filewallball-app-config ConfigMap: 17개 환경 변수 설정 (데이터베이스, Redis, 애플리케이션, 파일 업로드, 보안, 메트릭 설정)
+2. filewallball-app-secret Secret: 4개 민감 정보 (데이터베이스 비밀번호, JWT 시크릿 키, Redis 비밀번호, API 키)
+3. filewallball-prod-config ConfigMap: 프로덕션 환경 설정 (7개 변수)
+4. filewallball-dev-config ConfigMap: 개발 환경 설정 (7개 변수)
+
+검증 결과:
+- 매니페스트 문법 검증 통과 (kubectl apply --dry-run 성공)
+- 모든 ConfigMap/Secret 정상 생성 확인
+- 환경별 설정 분리 완료 (dev/prod)
+- base64 인코딩 정상 확인
+- 라벨링 및 네임스페이스 설정 완료
+
+작업 완료 상태: ConfigMap 및 Secret 리소스 구성 작업이 성공적으로 완료되어 다음 단계인 Deployment 및 Service 매니페스트 작성으로 진행 준비 완료
+</info added on 2025-07-30T09:14:31.668Z>
+
+## 3. Deployment 및 Service 매니페스트 작성 [done]
+### Dependencies: 14.1, 14.2
+### Description: FastAPI 애플리케이션을 위한 Deployment와 Service 리소스를 구성합니다.
+### Details:
+Deployment 작성: replicas: 2, 이미지 태그 관리, 환경 변수 주입 (ConfigMap/Secret 참조). 리소스 제한: requests (CPU: 100m, Memory: 128Mi), limits (CPU: 500m, Memory: 512Mi). 프로브 설정: livenessProbe (/health), readinessProbe (/ready). Service 작성: ClusterIP 타입, 포트 8000, 셀렉터 설정. 롤링 업데이트 전략: maxSurge: 1, maxUnavailable: 0.
+<info added on 2025-07-30T09:14:50.979Z>
+현재 상황 분석:
+- 기존 filewallball-deployment가 CrashLoopBackOff 상태로 문제 발생
+- filewallball-service는 ClusterIP로 정상 운영 중
+- ConfigMap과 Secret 리소스가 이미 준비 완료
+
+작업 진행 계획:
+1. 기존 Deployment 상태 분석 및 문제점 파악
+2. 새로운 Deployment 매니페스트 작성 (replicas: 2, ConfigMap/Secret 환경 변수 주입)
+3. Service 매니페스트 작성 (ClusterIP 타입, 포트 8000, 적절한 셀렉터 설정)
+4. 헬스체크 프로브 설정 (livenessProbe: /health, readinessProbe: /ready)
+5. 리소스 제한 및 롤링 업데이트 전략 적용
+6. 매니페스트 검증 후 배포 실행
+
+다음 단계에서는 CrashLoopBackOff 원인 분석을 통해 안정적인 Deployment 구성을 목표로 합니다.
+</info added on 2025-07-30T09:14:50.979Z>
+
+## 4. 스토리지 및 PersistentVolume 설정 [done]
+### Dependencies: 14.3
+### Description: 파일 업로드를 위한 PersistentVolume과 PersistentVolumeClaim을 구성합니다.
+### Details:
+StorageClass 정의: MicroK8s local-path-provisioner 사용. PersistentVolume 작성: 용량 10Gi, hostPath 또는 local 타입, 액세스 모드 ReadWriteMany. PersistentVolumeClaim 작성: 스토리지 요청 10Gi, 동적 프로비저닝. Deployment 볼륨 마운트: /app/uploads 경로에 PVC 마운트. 백업 전략: 볼륨 스냅샷 설정 검토.
+
+## 5. Ingress 및 HPA 설정 [done]
+### Dependencies: 14.3, 14.4
+### Description: nginx-ingress를 사용한 외부 접근 설정과 HorizontalPodAutoscaler를 구성합니다.
+### Details:
+Ingress 리소스 작성: nginx-ingress-controller 사용, SSL/TLS 터미네이션 설정, 도메인 라우팅 규칙. TLS 인증서: cert-manager 또는 수동 Secret 생성. HPA 설정: CPU 70% 임계값, 메모리 80% 임계값, min: 2, max: 10 replicas. 메트릭 서버 확인: metrics-server 설치 상태. Ingress 어노테이션: 업로드 크기 제한, 타임아웃 설정.

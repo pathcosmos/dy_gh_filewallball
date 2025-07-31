@@ -89,4 +89,4 @@ microk8s kubectl exec -n filewallball $MARIA_POD -- ls -lh $BACKUP_DIR/filewallb
 # 백업 완료
 log "✅ FileWallBall Database Backup 완료!"
 log "📁 백업 파일: $BACKUP_DIR/$COMPRESSED_FILE"
-log "📅 보관 기간: $RETENTION_DAYS일" 
+log "📅 보관 기간: $RETENTION_DAYS일"

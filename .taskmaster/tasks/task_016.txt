@@ -1,0 +1,88 @@
+# Task ID: 16
+# Title: Swagger API 문서화 구현
+# Status: done
+# Dependencies: 11, 12
+# Priority: high
+# Description: FileWallBall 프로젝트의 모든 엔드포인트에 대해 상세한 Swagger 문서화를 추가하여 완전한 API 문서를 제공합니다.
+# Details:
+FastAPI 자동 문서화 기능 확장: @app.get(), @app.post() 등 데코레이터에 response_model, summary, description, tags 추가. Pydantic 모델 문서화: Field() 함수로 각 필드에 description, example, constraints 추가. 응답 모델 정의: 성공/실패 응답에 대한 별도 스키마 정의 (SuccessResponse, ErrorResponse). OpenAPI 스키마 커스터마이징: openapi.json 메타데이터 설정 (title, version, description, contact, license). 예제 데이터 추가: 각 엔드포인트별 실제 사용 예제 JSON 데이터. 에러 응답 문서화: HTTPException별 상세 에러 코드와 메시지. 인증 스키마: JWT Bearer 토큰 인증 방식 문서화. 태그 그룹화: 파일 업로드, 파일 관리, 인증, 관리자 기능별 태그 분류. Swagger UI 커스터마이징: 로고, 색상, 레이아웃 설정.
+
+# Test Strategy:
+Swagger UI 접근성 테스트 (/docs 엔드포인트), OpenAPI JSON 스키마 유효성 검증 (/openapi.json), 각 엔드포인트 문서 완성도 검사, 예제 데이터 정확성 테스트, Try it out 기능 동작 테스트, 다양한 브라우저에서 문서 렌더링 테스트, API 문서와 실제 구현 일치성 검증
+
+# Subtasks:
+## 1. API 엔드포인트 문서화 메타데이터 추가 [done]
+### Dependencies: None
+### Description: 모든 FastAPI 엔드포인트에 Swagger 문서화를 위한 메타데이터(summary, description, tags, response_model)를 추가합니다.
+### Details:
+파일 업로드 엔드포인트: @app.post('/upload', summary='파일 업로드', description='최대 100MB 파일 업로드 지원', tags=['파일 관리']). 파일 다운로드: @app.get('/download/{file_id}', response_model=FileResponse). 인증 엔드포인트: @app.post('/auth/login', tags=['인증']). 관리자 기능: @app.delete('/admin/files/{file_id}', tags=['관리자']). 각 엔드포인트에 status_code, response_description 추가.
+<info added on 2025-07-31T04:47:09.412Z>
+API 엔드포인트 문서화 메타데이터 추가 작업 완료. FastAPI 앱 메타데이터 개선: OpenAPI 태그 정의 11개 카테고리, 상세한 API 설명 및 사용 예제, 연락처 정보 및 라이선스 정보, 서버 환경별 URL 설정. 주요 엔드포인트 문서화 완료: /upload (파일 업로드), /api/v1/files/upload (고급 파일 업로드 v2), /files/{file_id} (파일 정보 조회), /download/{file_id} (파일 다운로드), /view/{file_id} (파일 미리보기), /health (기본 헬스체크), /health/detailed (상세 헬스체크). Pydantic 모델 문서화: app/models/swagger_models.py 생성, 8개 상세 응답 모델 정의, 각 필드별 설명/예제/제약조건 추가, Config 클래스로 스키마 예제 설정. 응답 모델 통합: 새로운 Swagger 모델들을 main.py에 import, 헬스체크 엔드포인트에 응답 모델 적용, 에러 응답 모델 통합. 추가 기능: 각 엔드포인트별 상세 설명과 사용법, 실제 사용 예제 (curl 명령어), 에러 코드별 상세 설명, 파라미터별 설명과 예제, 응답 헤더 정보, Kubernetes 연동 정보.
+</info added on 2025-07-31T04:47:09.412Z>
+
+## 2. Pydantic 모델 상세 문서화 [done]
+### Dependencies: None
+### Description: 요청/응답 모델의 각 필드에 Field() 함수를 사용하여 상세한 설명, 예제, 제약조건을 추가합니다.
+### Details:
+FileUploadRequest: file = Field(..., description='업로드할 파일', example='document.pdf'). FileResponse: id = Field(..., description='파일 고유 ID', example='550e8400-e29b-41d4-a716'). UserModel: role = Field(..., description='사용자 권한', example='admin', regex='^(admin|user)$'). ErrorResponse: code = Field(..., description='에러 코드', example=400, ge=400, le=599). 모든 모델에 Config 클래스로 schema_extra 예제 추가.
+
+## 3. OpenAPI 스키마 커스터마이징 및 메타데이터 설정 [done]
+### Dependencies: 16.1, 16.2
+### Description: 애플리케이션 레벨의 OpenAPI 스키마를 커스터마이징하고 프로젝트 메타데이터를 설정합니다.
+### Details:
+app = FastAPI(title='FileWallBall API', version='1.0.0', description='안전한 파일 공유 플랫폼 API'). openapi_tags 설정: [{'name': '파일 관리', 'description': '파일 업로드/다운로드'}, {'name': '인증', 'description': 'JWT 기반 인증'}]. contact 정보: {'name': 'FileWallBall Team', 'email': 'support@fileWallBall.com'}. license_info: {'name': 'MIT', 'url': 'https://opensource.org/licenses/MIT'}. servers 설정: 개발/스테이징/프로덕션 환경별 URL.
+
+## 4. 에러 응답 및 인증 스키마 문서화 [done]
+### Dependencies: 16.2
+### Description: HTTPException 에러 응답과 JWT Bearer 토큰 인증 방식을 상세히 문서화합니다.
+### Details:
+HTTPException 응답 문서화: responses={400: {'model': ErrorResponse, 'description': '잘못된 요청'}, 401: {'model': ErrorResponse, 'description': '인증 실패'}, 404: {'model': ErrorResponse, 'description': '리소스 없음'}}. OAuth2PasswordBearer 스키마: security = HTTPBearer(). 각 보호된 엔드포인트에 dependencies=[Depends(get_current_user)] 및 security 파라미터 추가. 에러 코드 enum 정의 및 문서화.
+<info added on 2025-07-31T04:49:10.793Z>
+작업 완료 상태로 업데이트됨.
+
+**완료된 구현 사항:**
+
+1. **인증 스키마 정의 완료**
+   - `app/dependencies/auth_schema.py` 파일 생성
+   - JWT Bearer 토큰 인증 스키마 정의
+   - HTTPBearer 보안 스키마 설정
+   - 토큰 응답 모델 정의
+
+2. **에러 코드 체계화 완료**
+   - ErrorCodes 클래스로 에러 코드 상수 정의 (UNAUTHORIZED, FORBIDDEN, NOT_FOUND 등 8개)
+   - 각 에러 코드별 상세한 설명과 예제 JSON 포함
+
+3. **에러 응답 함수 구현 완료**
+   - `get_common_error_responses()`: 공통 에러 응답 (400, 401, 403, 404, 413, 429, 500)
+   - `get_file_error_responses()`: 파일 관련 에러 응답 (415, 416 추가)
+   - `get_admin_error_responses()`: 관리자 전용 에러 응답
+
+4. **예제 데이터 함수 구현 완료**
+   - `get_auth_header_example()`: JWT 토큰 헤더 예제
+   - `get_file_upload_example()`: 파일 업로드 예제
+   - `get_file_download_example()`: 파일 다운로드 예제
+   - `get_success_response_example()`: 성공 응답 예제
+
+5. **엔드포인트 에러 응답 적용 완료**
+   - 파일 업로드 엔드포인트: `get_file_error_responses()` 적용
+   - 파일 정보 조회: `get_common_error_responses()` 적용
+   - 파일 다운로드: `get_file_error_responses()` 적용
+   - 파일 미리보기: `get_common_error_responses()` 적용
+
+**추가 구현 기능:**
+- 파일 형식별 특화된 에러 응답 (415 Unsupported Media Type, 416 Range Not Satisfiable)
+- 관리자 권한 관련 에러 응답 체계
+- 실제 사용 가능한 JWT 토큰 예제 데이터
+- multipart/form-data 파일 업로드 예제 데이터
+
+Swagger UI에서 모든 에러 상황이 상세하게 문서화되어 개발자가 쉽게 이해하고 API 에러를 적절히 처리할 수 있도록 구현 완료.
+</info added on 2025-07-31T04:49:10.793Z>
+
+## 5. Swagger UI 커스터마이징 및 예제 데이터 통합 [done]
+### Dependencies: 16.3, 16.4
+### Description: Swagger UI의 외관을 커스터마이징하고 각 엔드포인트별 실제 사용 예제를 추가합니다.
+### Details:
+custom_openapi() 함수로 UI 커스터마이징: 로고 추가, 색상 테마 변경 (primary: #1976d2). ReDoc 문서화 추가: app.add_route('/redoc', ...). 각 엔드포인트에 request/response 예제 추가: openapi_examples 파라미터 사용. 파일 업로드 예제: multipart/form-data 샘플. 인증 헤더 예제: 'Authorization: Bearer <token>'. 다국어 지원: 한국어/영어 설명 병기.
+<info added on 2025-07-31T04:52:15.835Z>
+작업 완료 상태로 업데이트: app/utils/swagger_customization.py 파일 생성 완료. custom_openapi() 함수 구현으로 OpenAPI 스키마 완전 커스터마이징. get_swagger_ui_html() 및 get_redoc_html() 함수로 커스터마이징된 HTML 템플릿 제공. get_api_examples(), get_curl_examples(), get_code_examples() 함수로 실제 사용 가능한 예제 데이터 통합. FastAPI 앱에 app.openapi = lambda: custom_openapi(app) 설정 적용. 태그 그룹화 (파일 관리, 시스템 관리) 및 OAuth2 설정 완료. 요청/응답 인터셉터 추가로 디버깅 지원. Python, JavaScript, Java 코드 예제 및 cURL 명령어 예제 제공. 반응형 디자인 및 모바일 최적화 적용. 서버 환경별 URL 설정 (개발/프로덕션) 구성 완료.
+</info added on 2025-07-31T04:52:15.835Z>

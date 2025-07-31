@@ -1,0 +1,90 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: filewallball-backup-cronjob
+  namespace: filewallball
+  labels:
+    app: filewallball-backup
+spec:
+  schedule: "0 2 * * *"  # 매일 오전 2시
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+          - name: backup-job
+            image: bitnami/kubectl:latest
+            command:
+            - /bin/bash
+            - -c
+            - |
+              # MariaDB Pod 이름 가져오기
+              MARIA_POD=$(kubectl get pods -n filewallball -l app=mariadb -o jsonpath='{.items[0].metadata.name}')
+
+              if [ -z "$MARIA_POD" ]; then
+                echo "❌ MariaDB Pod를 찾을 수 없습니다."
+                exit 1
+              fi
+
+              echo "📦 MariaDB Pod: $MARIA_POD"
+
+              # 백업 디렉토리 확인
+              kubectl exec -n filewallball $MARIA_POD -- mkdir -p /backup
+
+              # 데이터베이스 백업 실행
+              DATE_FORMAT=$(date +"%Y%m%d_%H%M%S")
+              BACKUP_FILE="filewallball_backup_${DATE_FORMAT}.sql"
+              COMPRESSED_FILE="${BACKUP_FILE}.gz"
+
+              echo "🗄️ 데이터베이스 백업 실행 중..."
+              kubectl exec -n filewallball $MARIA_POD -- bash -c "
+              mysqldump -u root -pfilewallball2024 \
+                  --single-transaction \
+                  --routines \
+                  --triggers \
+                  --events \
+                  --hex-blob \
+                  --add-drop-database \
+                  --add-drop-table \
+                  --add-drop-trigger \
+                  --add-drop-event \
+                  --add-drop-procedure \
+                  --add-drop-function \
+                  --comments \
+                  --complete-insert \
+                  --extended-insert \
+                  --lock-tables=false \
+                  --set-charset \
+                  --default-character-set=utf8mb4 \
+                  filewallball_db > /backup/$BACKUP_FILE
+              "
+
+              # 백업 파일 압축
+              echo "🗜️ 백업 파일 압축 중..."
+              kubectl exec -n filewallball $MARIA_POD -- gzip /backup/$BACKUP_FILE
+
+              # 백업 파일 무결성 검증
+              echo "🔍 백업 파일 무결성 검증 중..."
+              kubectl exec -n filewallball $MARIA_POD -- gzip -t /backup/$COMPRESSED_FILE
+
+              # 오래된 백업 파일 정리 (7일)
+              echo "🧹 오래된 백업 파일 정리 중..."
+              kubectl exec -n filewallball $MARIA_POD -- bash -c "
+              find /backup -name 'filewallball_backup_*.sql.gz' -mtime +7 -delete
+              "
+
+              # 백업 완료
+              echo "✅ FileWallBall Database Backup 완료!"
+              echo "📁 백업 파일: /backup/$COMPRESSED_FILE"
+            env:
+            - name: KUBECONFIG
+              value: "/.kube/config"
+          serviceAccountName: filewallball-backup-sa
+          volumes:
+          - name: backup-storage
+            persistentVolumeClaim:
+              claimName: filewallball-backup-pvc

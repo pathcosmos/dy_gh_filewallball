@@ -251,4 +251,4 @@ microk8s kubectl cp ./backups/filewallball_backup_YYYYMMDD_HHMMSS.sql.gz filewal
 
 ---
 
-**최종 결과**: FileWallBall 백업 및 복구 시스템이 성공적으로 구현되었습니다. 자동 백업, 수동 백업, 복구 기능이 모두 작동하며, 7일 보관 정책과 무결성 검증이 적용되어 있습니다. 
+**최종 결과**: FileWallBall 백업 및 복구 시스템이 성공적으로 구현되었습니다. 자동 백업, 수동 백업, 복구 기능이 모두 작동하며, 7일 보관 정책과 무결성 검증이 적용되어 있습니다.

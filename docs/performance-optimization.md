@@ -38,53 +38,53 @@
 
 ### 테스트 1: 파일 검색 성능
 ```sql
-EXPLAIN SELECT * FROM files 
-WHERE is_deleted = FALSE 
-AND is_public = TRUE 
-AND file_extension = 'pdf' 
-ORDER BY created_at DESC 
+EXPLAIN SELECT * FROM files
+WHERE is_deleted = FALSE
+AND is_public = TRUE
+AND file_extension = 'pdf'
+ORDER BY created_at DESC
 LIMIT 10;
 ```
 **결과**: `idx_files_composite` 인덱스 사용, 최적화됨
 
 ### 테스트 2: 카테고리별 파일 조회
 ```sql
-EXPLAIN SELECT f.*, c.name as category_name 
-FROM files f 
-LEFT JOIN file_categories c ON f.file_category_id = c.id 
-WHERE f.is_deleted = FALSE 
-AND f.is_public = TRUE 
-AND f.file_category_id = 1 
+EXPLAIN SELECT f.*, c.name as category_name
+FROM files f
+LEFT JOIN file_categories c ON f.file_category_id = c.id
+WHERE f.is_deleted = FALSE
+AND f.is_public = TRUE
+AND f.file_category_id = 1
 ORDER BY f.created_at DESC;
 ```
 **결과**: `idx_files_category_public` 인덱스 사용, 최적화됨
 
 ### 테스트 3: 파일 크기 기반 정렬
 ```sql
-EXPLAIN SELECT * FROM files 
-WHERE is_deleted = FALSE 
-ORDER BY file_size DESC, created_at DESC 
+EXPLAIN SELECT * FROM files
+WHERE is_deleted = FALSE
+ORDER BY file_size DESC, created_at DESC
 LIMIT 10;
 ```
 **결과**: `idx_files_size` 인덱스 사용, 최적화됨
 
 ### 테스트 4: 태그 기반 검색
 ```sql
-EXPLAIN SELECT f.*, t.name as tag_name 
-FROM files f 
-JOIN file_tag_relations ftr ON f.id = ftr.file_id 
-JOIN file_tags t ON ftr.tag_id = t.id 
-WHERE f.is_deleted = FALSE 
-AND t.name = 'important' 
+EXPLAIN SELECT f.*, t.name as tag_name
+FROM files f
+JOIN file_tag_relations ftr ON f.id = ftr.file_id
+JOIN file_tags t ON ftr.tag_id = t.id
+WHERE f.is_deleted = FALSE
+AND t.name = 'important'
 ORDER BY f.created_at DESC;
 ```
 **결과**: 태그 관계 인덱스 활용, 최적화됨
 
 ### 테스트 5: 통계 뷰 성능
 ```sql
-EXPLAIN SELECT * FROM file_statistics 
-WHERE view_count > 0 
-ORDER BY download_count DESC 
+EXPLAIN SELECT * FROM file_statistics
+WHERE view_count > 0
+ORDER BY download_count DESC
 LIMIT 10;
 ```
 **결과**: 통계 뷰용 인덱스 활용, 최적화됨
@@ -118,27 +118,27 @@ kubectl exec -n filewallball mariadb-65c8cbd577-kb9lh -- tail -f /var/log/mysql/
 ### 인덱스 사용률 확인
 ```sql
 -- 인덱스 사용 통계 확인
-SELECT 
+SELECT
     TABLE_NAME,
     INDEX_NAME,
     CARDINALITY,
     INDEX_TYPE
-FROM information_schema.STATISTICS 
-WHERE TABLE_SCHEMA = 'filewallball_db' 
+FROM information_schema.STATISTICS
+WHERE TABLE_SCHEMA = 'filewallball_db'
 ORDER BY TABLE_NAME, INDEX_NAME;
 ```
 
 ### 테이블 크기 모니터링
 ```sql
 -- 테이블 크기 및 통계 확인
-SELECT 
+SELECT
     TABLE_NAME,
     TABLE_ROWS,
     DATA_LENGTH,
     INDEX_LENGTH,
     (DATA_LENGTH + INDEX_LENGTH) as TOTAL_SIZE
-FROM information_schema.TABLES 
-WHERE TABLE_SCHEMA = 'filewallball_db' 
+FROM information_schema.TABLES
+WHERE TABLE_SCHEMA = 'filewallball_db'
 ORDER BY TABLE_NAME;
 ```
 
@@ -196,4 +196,4 @@ ANALYZE TABLE file_downloads;
 
 ---
 
-**최종 결과**: FileWallBall 데이터베이스 성능 최적화가 성공적으로 완료되었습니다. 모든 주요 쿼리가 인덱스를 활용하여 최적의 성능을 발휘할 수 있도록 구성되었습니다. 
+**최종 결과**: FileWallBall 데이터베이스 성능 최적화가 성공적으로 완료되었습니다. 모든 주요 쿼리가 인덱스를 활용하여 최적의 성능을 발휘할 수 있도록 구성되었습니다.

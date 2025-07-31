@@ -5,21 +5,24 @@ IP 인증 관련 테이블들을 직접 생성하는 스크립트
 
 import os
 import sys
+
 from sqlalchemy import create_engine, text
+
 from app.config import get_settings
+
 
 def create_ip_auth_tables():
     """IP 인증 관련 테이블들을 생성합니다."""
-    
+
     # 설정 로드
     settings = get_settings()
     database_url = settings.database_url
-    
+
     print(f"데이터베이스 URL: {database_url}")
-    
+
     # 엔진 생성
     engine = create_engine(database_url)
-    
+
     # 테이블 생성 SQL
     tables_sql = [
         """
@@ -106,29 +109,34 @@ def create_ip_auth_tables():
         """,
         """
         CREATE UNIQUE INDEX IF NOT EXISTS unique_rate_limit ON ip_rate_limits (ip_address, api_key_hash, window_start)
-        """
+        """,
     ]
-    
+
     try:
         with engine.connect() as connection:
             for i, sql in enumerate(tables_sql, 1):
                 print(f"실행 중: {i}/{len(tables_sql)}")
                 connection.execute(text(sql))
                 connection.commit()
-            
+
             print("✅ IP 인증 관련 테이블들이 성공적으로 생성되었습니다!")
-            
+
             # 생성된 테이블 확인
-            result = connection.execute(text("SELECT name FROM sqlite_master WHERE type='table' AND name LIKE '%ip%'"))
+            result = connection.execute(
+                text(
+                    "SELECT name FROM sqlite_master WHERE type='table' AND name LIKE '%ip%'"
+                )
+            )
             tables = [row[0] for row in result]
             print(f"생성된 IP 관련 테이블들: {tables}")
-            
+
     except Exception as e:
         print(f"❌ 테이블 생성 중 오류 발생: {e}")
         return False
-    
+
     return True
+
 
 if __name__ == "__main__":
     success = create_ip_auth_tables()
-    sys.exit(0 if success else 1) 
+    sys.exit(0 if success else 1)

@@ -129,4 +129,4 @@ else
 fi
 
 echo ""
-echo -e "${BLUE}=== 모니터링 완료 ===${NC}" 
+echo -e "${BLUE}=== 모니터링 완료 ===${NC}"

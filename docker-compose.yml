@@ -1,0 +1,176 @@
+version: '3.8'
+
+services:
+  # FileWallBall API Application
+  filewallball:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=development
+      - DEBUG=true
+      - DB_HOST=mariadb
+      - DB_PORT=3306
+      - DB_NAME=filewallball_db
+      - DB_USER=filewallball_user
+      - DB_PASSWORD=filewallball_user_password
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=filewallball2024
+      # 파일 저장소 설정
+      - UPLOAD_DIR=/app/uploads
+      - HOST_UPLOAD_DIR=./uploads
+      - CONTAINER_UPLOAD_DIR=/app/uploads
+      - STORAGE_TYPE=local
+      - LOCAL_STORAGE_PATH=/app/uploads
+      - STORAGE_STRUCTURE=date
+      - STORAGE_DATE_FORMAT=%Y/%m/%d
+      - STORAGE_UUID_DEPTH=2
+      - LOG_LEVEL=INFO
+    volumes:
+      # 호스트 OS 경로를 컨테이너 내부 경로에 매핑
+      - ./uploads:/app/uploads
+      - ./logs:/app/logs
+      - ./backups:/app/backups
+      # 추가 볼륨 마운트 옵션들
+      - filewallball_data:/app/data
+      - filewallball_temp:/app/temp
+    depends_on:
+      - mariadb
+      - redis
+    networks:
+      - filewallball-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  # MariaDB Database
+  mariadb:
+    image: mariadb:10.11
+    environment:
+      - MYSQL_ROOT_PASSWORD=root_password
+      - MYSQL_DATABASE=filewallball_db
+      - MYSQL_USER=filewallball_user
+      - MYSQL_PASSWORD=filewallball_user_password
+    ports:
+      - "3306:3306"
+    volumes:
+      - mariadb_data:/var/lib/mysql
+      - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - filewallball-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p$$MYSQL_ROOT_PASSWORD"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    command: redis-server --requirepass filewallball2024
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - filewallball-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  # Redis Exporter for Monitoring
+  redis-exporter:
+    image: oliver006/redis_exporter:latest
+    environment:
+      - REDIS_ADDR=redis://redis:6379
+      - REDIS_PASSWORD=filewallball2024
+    ports:
+      - "9121:9121"
+    depends_on:
+      - redis
+    networks:
+      - filewallball-network
+    restart: unless-stopped
+
+  # Prometheus Monitoring
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./k8s/prometheus-configmap.yaml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    networks:
+      - filewallball-network
+    restart: unless-stopped
+
+  # Grafana Dashboard
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./k8s/grafana-dashboards.yaml:/etc/grafana/provisioning/dashboards/dashboards.yaml
+      - ./k8s/grafana-datasources.yaml:/etc/grafana/provisioning/datasources/datasources.yaml
+    depends_on:
+      - prometheus
+    networks:
+      - filewallball-network
+    restart: unless-stopped
+
+  # Nginx Reverse Proxy (Optional)
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+      - ./ssl:/etc/nginx/ssl
+    depends_on:
+      - filewallball
+    networks:
+      - filewallball-network
+    restart: unless-stopped
+    profiles:
+      - production
+
+volumes:
+  mariadb_data:
+    driver: local
+  redis_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+  # 파일 저장소용 추가 볼륨들
+  filewallball_data:
+    driver: local
+  filewallball_temp:
+    driver: local
+
+networks:
+  filewallball-network:
+    driver: bridge
