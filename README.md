@@ -2,6 +2,8 @@
 
 FastAPI 기반의 안전한 파일 업로드/조회/다운로드 API 시스템입니다. MicroK8s 환경에서 구동되며, 실시간 요청에 따른 자동 스케일링을 지원합니다.
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 ## 🚀 주요 기능
 
 - **파일 업로드**: POST `/upload` - 파일 업로드 후 조회 URL 반환
@@ -1010,7 +1012,9 @@ FileWallBall 프로젝트의 모든 문서를 체계적으로 정리한 가이�
 
 ## 📄 라이선스
 
-MIT License
+이 프로젝트는 MIT 라이선스 하에 배포됩니다. 자세한 내용은 [LICENSE](LICENSE) 파일을 참조하세요.
+
+MIT License - 자유롭게 사용, 수정, 배포할 수 있는 오픈소스 라이선스입니다.
 
 ## 📞 지원
 

@@ -87,6 +87,7 @@ setup(
     long_description=read_readme(),
     long_description_content_type="text/markdown",
     url="https://github.com/filewallball/api",
+    license="MIT",
     packages=find_packages(),
     classifiers=[
         "Development Status :: 4 - Beta",
