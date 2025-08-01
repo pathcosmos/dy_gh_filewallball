@@ -91,6 +91,7 @@ from app.services.rate_limiter_service import RateLimiterService
 from app.services.rbac_service import rbac_service
 from app.services.scheduler_service import scheduler_service
 from app.utils.swagger_customization import custom_openapi
+from app.services.project_key_service import ProjectKeyService
 
 # Redis 연결
 redis_client = redis.Redis(
@@ -328,16 +329,18 @@ async def calculate_file_hash(file_id: str, file_path: Path):
 @app.post(
     "/upload",
     response_model=UploadResponse,
-    summary="파일 업로드",
+    summary="파일 업로드 (프로젝트 키 검증)",
     description="""
-    파일을 업로드하고 시스템에 저장합니다.
+    프로젝트 키를 검증하여 파일을 업로드하고 시스템에 저장합니다.
 
     ## 기능
+    - 프로젝트 키 유효성 검증
     - 최대 100MB 파일 업로드 지원
     - 파일 형식 검증 및 바이러스 스캔
     - 자동 썸네일 생성 (이미지 파일)
     - 파일 해시 계산 (백그라운드)
     - 업로드 통계 기록
+    - 프로젝트별 파일 분류
 
     ## 지원 파일 형식
     - 이미지: jpg, jpeg, png, gif, webp, bmp, tiff
@@ -346,12 +349,17 @@ async def calculate_file_hash(file_id: str, file_path: Path):
     - 오디오: mp3, wav, flac, aac, ogg
     - 압축: zip, rar, 7z, tar, gz
 
+    ## 파라미터
+    - `file`: 업로드할 파일 (필수)
+    - `project_key`: 프로젝트 키 (필수)
+
     ## 응답
     - `file_id`: 업로드된 파일의 고유 식별자
     - `filename`: 원본 파일명
     - `download_url`: 파일 다운로드 URL
     - `view_url`: 파일 미리보기 URL (지원되는 경우)
     - `message`: 성공 메시지
+    - `project_name`: 프로젝트명
     """,
     tags=["파일 업로드"],
     responses=get_file_error_responses(),
@@ -359,11 +367,11 @@ async def calculate_file_hash(file_id: str, file_path: Path):
 async def upload_file(
     background_tasks: BackgroundTasks,
     file: UploadFile = File(..., description="업로드할 파일", example="document.pdf"),
+    project_key: str = Form(..., description="프로젝트 키"),
     request: Request = None,
     db: Session = Depends(get_db),
-    current_user=Depends(require_file_create),
 ):
-    """파일 업로드 API - 강화된 검증 및 에러 처리"""
+    """파일 업로드 API - 프로젝트 키 검증 및 강화된 검증"""
     start_time = datetime.now()
     file_uuid = None
     error_handler = ErrorHandlerService(db, str(UPLOAD_DIR))
@@ -374,7 +382,17 @@ async def upload_file(
     ).inc()
 
     try:
-        # 1. 파일 검증
+        # 1. 프로젝트 키 검증
+        project_key_service = ProjectKeyService(db)
+        project_info = project_key_service.validate_project_key(project_key)
+        
+        if not project_info:
+            raise HTTPException(
+                status_code=401,
+                detail="유효하지 않은 프로젝트 키입니다"
+            )
+        
+        # 2. 파일 검증
         validation_result = await file_validation_service.validate_upload_file(file)
         if not validation_result["is_valid"]:
             raise HTTPException(
@@ -418,10 +436,30 @@ async def upload_file(
             "uploader_ip": request.client.host if request else "unknown",
         }
 
-        # 8. Redis에 파일 정보 저장 (24시간 만료)
+        # 8. 데이터베이스에 파일 정보 저장
+        from app.models.orm_models import FileInfo
+        
+        db_file_info = FileInfo(
+            file_uuid=file_uuid,
+            original_filename=file.filename,
+            stored_filename=saved_filename,
+            file_extension=file_extension,
+            mime_type=validation_result.get("detected_mime_type", file.content_type),
+            file_size=len(content),
+            storage_path=str(file_path),
+            project_key_id=project_info.id,  # 프로젝트 키 ID 연결
+            is_public=True,
+            is_deleted=False
+        )
+        
+        db.add(db_file_info)
+        db.commit()
+        db.refresh(db_file_info)
+
+        # 9. Redis에 파일 정보 저장 (24시간 만료)
         redis_client.setex(f"file:{file_uuid}", 86400, str(file_info))
 
-        # 9. URL 생성
+        # 10. URL 생성
         base_url = os.getenv("BASE_URL", "http://localhost:8000")
         download_url = f"{base_url}/download/{file_uuid}"
         view_url = f"{base_url}/view/{file_uuid}"
@@ -486,7 +524,7 @@ async def upload_file(
             filename=file.filename,
             download_url=download_url,
             view_url=view_url,
-            message="File uploaded successfully",
+            message=f"File uploaded successfully to project: {project_info.project_name}",
         )
 
     except HTTPException:
@@ -783,7 +821,6 @@ async def upload_file_v2(
 )
 async def get_file_info(
     file_id: str = Path(
-        ...,
         description="조회할 파일의 고유 식별자",
         example="550e8400-e29b-41d4-a716-446655440000",
     ),
@@ -908,7 +945,6 @@ async def get_file_info(
 )
 async def download_file(
     file_id: str = Path(
-        ...,
         description="다운로드할 파일의 고유 식별자",
         example="550e8400-e29b-41d4-a716-446655440000",
     ),
@@ -1141,7 +1177,6 @@ async def record_download_statistics(file_id: str, client_ip: str):
 )
 async def view_file(
     file_id: str = Path(
-        ...,
         description="미리보기할 파일의 고유 식별자",
         example="550e8400-e29b-41d4-a716-446655440000",
     ),
@@ -2693,3 +2728,79 @@ async def shutdown_event():
 
     except Exception as e:
         print(f"❌ Failed to stop services: {e}")
+
+
+@app.post("/keygen")
+async def generate_project_key(
+    project_name: str = Form(..., description="프로젝트명"),
+    request_date: str = Form(..., description="요청 날짜 (YYYYMMDD)"),
+    master_key: str = Form(..., description="마스터 키"),
+    request: Request = None,
+    db: Session = Depends(get_db),
+):
+    """
+    프로젝트 고유 키 생성 API
+    
+    ## 기능
+    - 프로젝트명, 요청 날짜, IP 주소를 기반으로 고유 키 생성
+    - 마스터 키 검증
+    - 생성된 키를 데이터베이스에 저장
+    
+    ## 파라미터
+    - `project_name`: 프로젝트명 (필수)
+    - `request_date`: 요청 날짜 YYYYMMDD 형식 (필수)
+    - `master_key`: 마스터 키 (필수)
+    
+    ## 응답
+    - `project_key`: 생성된 프로젝트 키
+    - `project_name`: 프로젝트명
+    - `request_date`: 요청 날짜
+    - `request_ip`: 요청 IP 주소
+    - `message`: 성공 메시지
+    """
+    try:
+        # 마스터 키 검증
+        expected_master_key = "dysnt2025FileWallersBallKAuEZzTAsBjXiQ=="
+        if master_key != expected_master_key:
+            raise HTTPException(
+                status_code=401, 
+                detail="마스터 키가 유효하지 않습니다"
+            )
+        
+        # 요청 날짜 형식 검증
+        try:
+            datetime.strptime(request_date, "%Y%m%d")
+        except ValueError:
+            raise HTTPException(
+                status_code=400,
+                detail="요청 날짜는 YYYYMMDD 형식이어야 합니다"
+            )
+        
+        # 클라이언트 IP 추출
+        client_ip = request.client.host if request else "unknown"
+        
+        # 프로젝트 키 서비스 초기화
+        project_key_service = ProjectKeyService(db)
+        
+        # 프로젝트 키 생성
+        project_key_obj = project_key_service.create_project_key(
+            project_name=project_name,
+            request_date=request_date,
+            request_ip=client_ip
+        )
+        
+        return {
+            "project_key": project_key_obj.project_key,
+            "project_name": project_key_obj.project_name,
+            "request_date": project_key_obj.request_date,
+            "request_ip": project_key_obj.request_ip,
+            "message": "프로젝트 키가 성공적으로 생성되었습니다"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"프로젝트 키 생성 실패: {str(e)}"
+        )

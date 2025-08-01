@@ -188,7 +188,7 @@ class HealthCheckResponse(BaseModel):
     """헬스체크 응답 모델"""
 
     status: str = Field(
-        ..., description="시스템 상태", example="healthy", regex="^(healthy|unhealthy)$"
+        ..., description="시스템 상태", example="healthy", pattern="^(healthy|unhealthy)$"
     )
     timestamp: datetime = Field(
         ..., description="응답 시간", example="2024-01-15T10:30:00Z"
@@ -214,7 +214,7 @@ class DetailedHealthCheckResponse(BaseModel):
         ...,
         description="전체 시스템 상태",
         example="healthy",
-        regex="^(healthy|unhealthy)$",
+        pattern="^(healthy|unhealthy)$",
     )
     timestamp: datetime = Field(
         ..., description="응답 시간", example="2024-01-15T10:30:00Z"
@@ -335,10 +335,10 @@ class AuditLogResponse(BaseModel):
         ...,
         description="수행된 액션",
         example="file_upload",
-        regex="^(create|read|update|delete|upload|download|view)$",
+        pattern="^(create|read|update|delete|upload|download|view)$",
     )
     resource_type: str = Field(
-        ..., description="리소스 타입", example="file", regex="^(file|user|system)$"
+        ..., description="리소스 타입", example="file", pattern="^(file|user|system)$"
     )
     resource_id: Optional[str] = Field(
         None, description="리소스 ID", example="550e8400-e29b-41d4-a716-446655440000"
@@ -347,7 +347,7 @@ class AuditLogResponse(BaseModel):
         ...,
         description="액션 결과",
         example="success",
-        regex="^(success|failed|denied)$",
+        pattern="^(success|failed|denied)$",
     )
     ip_address: str = Field(..., description="사용자 IP 주소", example="192.168.1.100")
     user_agent: Optional[str] = Field(
@@ -391,13 +391,13 @@ class BackgroundTaskResponse(BaseModel):
         ...,
         description="작업 타입",
         example="thumbnail_generation",
-        regex="^(thumbnail_generation|file_hash_calculation|file_cleanup|backup_creation)$",
+        pattern="^(thumbnail_generation|file_hash_calculation|file_cleanup|backup_creation)$",
     )
     status: str = Field(
         ...,
         description="작업 상태",
         example="running",
-        regex="^(pending|running|completed|failed|cancelled)$",
+        pattern="^(pending|running|completed|failed|cancelled)$",
     )
     progress: int = Field(..., description="진행률 (0-100)", example=75, ge=0, le=100)
     created_at: datetime = Field(

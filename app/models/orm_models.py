@@ -47,6 +47,9 @@ class FileInfo(Base):
     owner_id: Mapped[Optional[int]] = mapped_column(
         Integer, ForeignKey("users.id"), index=True
     )  # Task 12.5: 파일 소유자
+    project_key_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("project_keys.id"), index=True
+    )  # 프로젝트 키 ID
     is_public: Mapped[bool] = mapped_column(Boolean, default=True)
     is_deleted: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
     created_at: Mapped[datetime] = mapped_column(
@@ -63,6 +66,9 @@ class FileInfo(Base):
     owner: Mapped[Optional["User"]] = relationship(
         "User", back_populates="owned_files"
     )  # Task 12.5: 소유자 관계
+    project: Mapped[Optional["ProjectKey"]] = relationship(
+        "ProjectKey", back_populates="files"
+    )  # 프로젝트 키 관계
     uploads: Mapped[List["FileUpload"]] = relationship(
         "FileUpload", back_populates="file"
     )
@@ -596,3 +602,26 @@ class AuditLog(Base):
 
     def __repr__(self):
         return f"<AuditLog(id={self.id}, user_id={self.user_id}, action='{self.action}', resource='{self.resource_type}')>"
+
+
+class ProjectKey(Base):
+    """프로젝트 키 관리 모델"""
+    
+    __tablename__ = "project_keys"
+    
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    project_name: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
+    project_key: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
+    request_date: Mapped[str] = mapped_column(String(8), nullable=False)  # YYYYMMDD
+    request_ip: Mapped[str] = mapped_column(String(45), nullable=False, index=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+    )
+    
+    # 관계 정의
+    files: Mapped[List["FileInfo"]] = relationship("FileInfo", back_populates="project")
+    
+    def __repr__(self):
+        return f"<ProjectKey(id={self.id}, project_name='{self.project_name}', key='{self.project_key[:10]}...')>"
