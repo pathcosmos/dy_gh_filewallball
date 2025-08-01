@@ -482,6 +482,46 @@ class AsyncRedisClient:
             logger.error(f"패턴 삭제 실패: {pattern}, 오류: {e}")
             return 0
 
+    async def increment(self, key: str, amount: int = 1) -> int:
+        """
+        키의 값을 증가시킴
+
+        Args:
+            key: 증가시킬 키
+            amount: 증가시킬 양 (기본값: 1)
+
+        Returns:
+            int: 증가된 후의 값
+        """
+        try:
+            async with self.get_connection() as redis_client:
+                result = await redis_client.incrby(key, amount)
+                logger.debug(f"키 증가 완료: {key}, 증가량: {amount}, 새 값: {result}")
+                return result
+        except Exception as e:
+            logger.error(f"키 증가 실패: {key}, 오류: {e}")
+            return 0
+
+    async def decrement(self, key: str, amount: int = 1) -> int:
+        """
+        키의 값을 감소시킴
+
+        Args:
+            key: 감소시킬 키
+            amount: 감소시킬 양 (기본값: 1)
+
+        Returns:
+            int: 감소된 후의 값
+        """
+        try:
+            async with self.get_connection() as redis_client:
+                result = await redis_client.decrby(key, amount)
+                logger.debug(f"키 감소 완료: {key}, 감소량: {amount}, 새 값: {result}")
+                return result
+        except Exception as e:
+            logger.error(f"키 감소 실패: {key}, 오류: {e}")
+            return 0
+
     async def close(self):
         """Redis 연결 종료"""
         try:

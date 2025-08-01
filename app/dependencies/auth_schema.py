@@ -7,6 +7,7 @@ from typing import Optional
 from fastapi import HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
+from app.models.api_models import ErrorResponse
 
 # JWT Bearer 토큰 인증 스키마
 security = HTTPBearer(
@@ -53,7 +54,7 @@ def get_common_error_responses():
     return {
         400: {
             "description": "잘못된 요청",
-            "model": "ErrorResponse",
+            "model": ErrorResponse,
             "content": {
                 "application/json": {
                     "example": {
@@ -67,7 +68,7 @@ def get_common_error_responses():
         },
         401: {
             "description": "인증 실패",
-            "model": "ErrorResponse",
+            "model": ErrorResponse,
             "content": {
                 "application/json": {
                     "example": {
@@ -81,7 +82,7 @@ def get_common_error_responses():
         },
         403: {
             "description": "권한 없음",
-            "model": "ErrorResponse",
+            "model": ErrorResponse,
             "content": {
                 "application/json": {
                     "example": {
@@ -95,7 +96,7 @@ def get_common_error_responses():
         },
         404: {
             "description": "리소스 없음",
-            "model": "ErrorResponse",
+            "model": ErrorResponse,
             "content": {
                 "application/json": {
                     "example": {
@@ -109,7 +110,7 @@ def get_common_error_responses():
         },
         413: {
             "description": "파일 크기 초과",
-            "model": "ErrorResponse",
+            "model": ErrorResponse,
             "content": {
                 "application/json": {
                     "example": {
@@ -123,7 +124,7 @@ def get_common_error_responses():
         },
         429: {
             "description": "요청 한도 초과",
-            "model": "ErrorResponse",
+            "model": ErrorResponse,
             "content": {
                 "application/json": {
                     "example": {
@@ -137,7 +138,7 @@ def get_common_error_responses():
         },
         500: {
             "description": "서버 내부 오류",
-            "model": "ErrorResponse",
+            "model": ErrorResponse,
             "content": {
                 "application/json": {
                     "example": {

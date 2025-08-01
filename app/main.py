@@ -64,13 +64,13 @@ from app.models.api_models import (
 from app.models.orm_models import FileInfo
 from app.models.swagger_models import (
     DetailedHealthCheckResponse,
-    ErrorResponse,
     FileInfoResponse,
     FileUploadResponse,
     HealthCheckResponse,
     MetricsResponse,
     UploadResponse,
 )
+from app.models.api_models import ErrorResponse
 from app.routers.health import router as health_router
 from app.routers.ip_auth_router import router as ip_auth_router
 from app.services.advanced_rate_limiter import rate_limit_middleware
@@ -87,11 +87,11 @@ from app.services.file_storage_service import FileStorageService
 from app.services.file_validation_service import file_validation_service
 from app.services.health_check_service import health_check_service
 from app.services.metadata_service import MetadataService
+from app.services.project_key_service import ProjectKeyService
 from app.services.rate_limiter_service import RateLimiterService
 from app.services.rbac_service import rbac_service
 from app.services.scheduler_service import scheduler_service
 from app.utils.swagger_customization import custom_openapi
-from app.services.project_key_service import ProjectKeyService
 
 # Redis 연결
 redis_client = redis.Redis(
@@ -385,13 +385,12 @@ async def upload_file(
         # 1. 프로젝트 키 검증
         project_key_service = ProjectKeyService(db)
         project_info = project_key_service.validate_project_key(project_key)
-        
+
         if not project_info:
             raise HTTPException(
-                status_code=401,
-                detail="유효하지 않은 프로젝트 키입니다"
+                status_code=401, detail="유효하지 않은 프로젝트 키입니다"
             )
-        
+
         # 2. 파일 검증
         validation_result = await file_validation_service.validate_upload_file(file)
         if not validation_result["is_valid"]:
@@ -438,7 +437,7 @@ async def upload_file(
 
         # 8. 데이터베이스에 파일 정보 저장
         from app.models.orm_models import FileInfo
-        
+
         db_file_info = FileInfo(
             file_uuid=file_uuid,
             original_filename=file.filename,
@@ -449,9 +448,9 @@ async def upload_file(
             storage_path=str(file_path),
             project_key_id=project_info.id,  # 프로젝트 키 ID 연결
             is_public=True,
-            is_deleted=False
+            is_deleted=False,
         )
-        
+
         db.add(db_file_info)
         db.commit()
         db.refresh(db_file_info)
@@ -2740,17 +2739,17 @@ async def generate_project_key(
 ):
     """
     프로젝트 고유 키 생성 API
-    
+
     ## 기능
     - 프로젝트명, 요청 날짜, IP 주소를 기반으로 고유 키 생성
     - 마스터 키 검증
     - 생성된 키를 데이터베이스에 저장
-    
+
     ## 파라미터
     - `project_name`: 프로젝트명 (필수)
     - `request_date`: 요청 날짜 YYYYMMDD 형식 (필수)
     - `master_key`: 마스터 키 (필수)
-    
+
     ## 응답
     - `project_key`: 생성된 프로젝트 키
     - `project_name`: 프로젝트명
@@ -2762,45 +2761,36 @@ async def generate_project_key(
         # 마스터 키 검증
         expected_master_key = "dysnt2025FileWallersBallKAuEZzTAsBjXiQ=="
         if master_key != expected_master_key:
-            raise HTTPException(
-                status_code=401, 
-                detail="마스터 키가 유효하지 않습니다"
-            )
-        
+            raise HTTPException(status_code=401, detail="마스터 키가 유효하지 않습니다")
+
         # 요청 날짜 형식 검증
         try:
             datetime.strptime(request_date, "%Y%m%d")
         except ValueError:
             raise HTTPException(
-                status_code=400,
-                detail="요청 날짜는 YYYYMMDD 형식이어야 합니다"
+                status_code=400, detail="요청 날짜는 YYYYMMDD 형식이어야 합니다"
             )
-        
+
         # 클라이언트 IP 추출
         client_ip = request.client.host if request else "unknown"
-        
+
         # 프로젝트 키 서비스 초기화
         project_key_service = ProjectKeyService(db)
-        
+
         # 프로젝트 키 생성
         project_key_obj = project_key_service.create_project_key(
-            project_name=project_name,
-            request_date=request_date,
-            request_ip=client_ip
+            project_name=project_name, request_date=request_date, request_ip=client_ip
         )
-        
+
         return {
             "project_key": project_key_obj.project_key,
             "project_name": project_key_obj.project_name,
             "request_date": project_key_obj.request_date,
             "request_ip": project_key_obj.request_ip,
-            "message": "프로젝트 키가 성공적으로 생성되었습니다"
+            "message": "프로젝트 키가 성공적으로 생성되었습니다",
         }
-        
+
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"프로젝트 키 생성 실패: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"프로젝트 키 생성 실패: {str(e)}")

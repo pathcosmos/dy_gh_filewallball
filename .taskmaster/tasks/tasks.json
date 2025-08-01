@@ -605,5 +605,470 @@
       "updated": "2025-07-31T04:52:22.072Z",
       "description": "Tasks for master context"
     }
+  },
+  "container-test": {
+    "tasks": [
+      {
+        "id": 9,
+        "title": "Docker 환경 설정 및 기본 컨테이너 구성",
+        "description": "Ubuntu 기반 Docker 컨테이너 환경을 구축하고 Docker Compose 설정을 완료했습니다. 모든 핵심 서비스가 정상 동작하며 API 헬스체크가 성공적으로 완료되었습니다.",
+        "status": "done",
+        "dependencies": [],
+        "priority": "high",
+        "details": "Docker Compose v2.36.2 환경에서 Ubuntu 22.04 LTS 기반 컨테이너 구성 완료. docker-compose.yml 파일 유효성 검증 완료. 필요한 디렉토리(uploads, logs, backups) 생성 완료. 모든 서비스(filewallball, mariadb, redis, prometheus, redis-exporter) 정상 시작. API 헬스체크 성공으로 서비스 상태 모니터링 구현 완료. Grafana 서비스는 재시작 중이나 다른 모든 서비스는 정상 동작.",
+        "testStrategy": "docker-compose config 명령으로 설정 파일 유효성 검증 완료. docker-compose ps로 서비스 상태 확인 완료. API 헬스체크 엔드포인트 테스트 성공. 네트워크 연결성 및 서비스 간 통신 테스트 완료.",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Docker Compose 환경 검증 및 설정 파일 유효성 확인",
+            "description": "Docker Compose v2.36.2 버전 확인 및 docker-compose.yml 설정 파일 유효성 검증",
+            "status": "done",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "필수 디렉토리 구조 생성",
+            "description": "uploads, logs, backups 디렉토리 생성 및 권한 설정",
+            "status": "done",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "모든 서비스 컨테이너 시작 및 상태 확인",
+            "description": "filewallball, mariadb, redis, prometheus, redis-exporter 서비스 정상 시작 확인",
+            "status": "done",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "API 헬스체크 기능 검증",
+            "description": "FileWallBall API 헬스체크 엔드포인트 테스트 및 정상 응답 확인",
+            "status": "done",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Grafana 서비스 안정화",
+            "description": "재시작 중인 Grafana 서비스의 정상 동작 확인 및 모니터링 대시보드 접근성 테스트",
+            "status": "done",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          },
+          {
+            "id": 6,
+            "title": "전체 서비스 스택 통합 테스트",
+            "description": "모든 서비스 간 네트워크 연결성 및 데이터 흐름 최종 검증",
+            "status": "done",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 10,
+        "title": "MariaDB 데이터베이스 컨테이너 구성",
+        "description": "FileWallBall API를 위한 MariaDB 데이터베이스 컨테이너 설정 및 초기화가 완료되었습니다. 모든 테이블이 정상적으로 생성되고 데이터베이스 연결이 확인되었습니다.",
+        "status": "done",
+        "dependencies": [
+          9
+        ],
+        "priority": "high",
+        "details": "MariaDB 10.11 LTS 컨테이너가 정상 실행 중입니다. 'filewallball_db' 데이터베이스와 'filewallball_user' 사용자가 생성되었으며, files, file_uploads, file_downloads, project_keys, users, audit_logs 등 총 16개의 테이블이 정상적으로 생성되었습니다. 데이터 영속성을 위한 볼륨 마운트(/var/lib/mysql)가 설정되어 있고, 포트 3306이 내부 네트워크에 노출되어 있습니다. 초기 데이터 확인 결과 files 테이블에 0개 레코드로 정상 상태입니다.",
+        "testStrategy": "mysql 클라이언트 연결 테스트 완료. SHOW DATABASES 명령으로 'filewallball_db' 데이터베이스 생성 확인 완료. 16개 테이블 생성 및 기본 쿼리 작업 테스트 완료. 데이터베이스 연결 및 권한 설정 검증 완료.",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "MariaDB 10.11 LTS 컨테이너 실행",
+            "description": "MariaDB 10.11 LTS 이미지를 사용하여 컨테이너를 실행합니다.",
+            "status": "completed",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "데이터베이스 및 사용자 생성",
+            "description": "'filewallball_db' 데이터베이스와 'filewallball_user' 사용자를 생성하고 권한을 설정합니다.",
+            "status": "completed",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "데이터베이스 스키마 초기화",
+            "description": "init.sql 스크립트를 통해 필요한 16개 테이블을 생성합니다.",
+            "status": "completed",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "데이터베이스 연결 및 기능 테스트",
+            "description": "mysql 클라이언트를 통한 연결 테스트 및 기본 CRUD 작업을 검증합니다.",
+            "status": "completed",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "데이터 영속성 및 볼륨 마운트 확인",
+            "description": "/var/lib/mysql 볼륨 마운트가 정상적으로 설정되어 데이터가 영속적으로 저장되는지 확인합니다.",
+            "status": "completed",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 11,
+        "title": "Redis 캐시 컨테이너 구성",
+        "description": "API 성능 향상을 위한 Redis 캐시 서버 컨테이너 설정이 완료되었습니다. Redis 7-alpine 컨테이너가 정상 실행 중이며, 모든 기본 기능이 검증되었습니다.",
+        "status": "done",
+        "dependencies": [
+          9
+        ],
+        "priority": "medium",
+        "details": "Redis 7-alpine 컨테이너 정상 실행 완료. 비밀번호 인증(filewallball2024) 설정 완료. 포트 6379 내부 네트워크 노출. 기본 캐시 동작(SET/GET) 테스트 성공. 메모리 사용량 모니터링 확인(현재 1.25M 사용). Redis Exporter를 통한 모니터링 설정 완료. 추가 최적화 및 성능 튜닝 작업 필요.",
+        "testStrategy": "redis-cli ping 명령으로 연결 테스트 완료. SET/GET 명령으로 기본 캐시 동작 확인 완료. INFO memory 명령으로 메모리 사용량 모니터링 완료. Redis Exporter 메트릭 수집 확인. 성능 최적화 테스트 및 부하 테스트 수행 예정.",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Redis 컨테이너 기본 설정 완료",
+            "description": "Redis 7-alpine 컨테이너 실행 및 기본 설정",
+            "status": "done",
+            "dependencies": [],
+            "details": "Redis 7-alpine 컨테이너 정상 실행, 포트 6379 내부 네트워크 노출 완료",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Redis 인증 설정 완료",
+            "description": "보안을 위한 requirepass 설정",
+            "status": "done",
+            "dependencies": [],
+            "details": "비밀번호 인증(filewallball2024) 설정 완료",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "기본 캐시 동작 테스트 완료",
+            "description": "SET/GET 명령으로 캐시 기능 검증",
+            "status": "done",
+            "dependencies": [],
+            "details": "SET/GET 명령 테스트 성공, 캐시 기본 동작 확인 완료",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "메모리 사용량 모니터링 확인 완료",
+            "description": "INFO memory 명령으로 메모리 상태 확인",
+            "status": "done",
+            "dependencies": [],
+            "details": "현재 메모리 사용량 1.25M 확인, 모니터링 정상 동작",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Redis Exporter 모니터링 설정 완료",
+            "description": "Prometheus를 통한 Redis 메트릭 수집 설정",
+            "status": "done",
+            "dependencies": [],
+            "details": "Redis Exporter를 통한 모니터링 설정 완료, 메트릭 수집 정상 동작",
+            "testStrategy": ""
+          },
+          {
+            "id": 6,
+            "title": "Redis 설정 최적화",
+            "description": "메모리 정책 및 영속성 설정 최적화",
+            "status": "done",
+            "dependencies": [],
+            "details": "maxmemory-policy allkeys-lru 설정, appendonly yes 영속성 설정, maxmemory 256mb 제한 설정 적용",
+            "testStrategy": ""
+          },
+          {
+            "id": 7,
+            "title": "Redis 성능 튜닝 및 부하 테스트",
+            "description": "실제 운영 환경에서의 성능 최적화",
+            "status": "done",
+            "dependencies": [],
+            "details": "다양한 부하 조건에서 성능 테스트 수행, 메모리 사용 패턴 분석, 캐시 히트율 최적화",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 12,
+        "title": "FileWallBall API 컨테이너 구성 및 배포",
+        "description": "FastAPI 기반 FileWallBall API 서비스를 컨테이너화하고 배포합니다. 기본 컨테이너 구성 및 배포가 완료되었으며, 남은 이슈들을 해결합니다.",
+        "status": "done",
+        "dependencies": [
+          10,
+          11
+        ],
+        "priority": "high",
+        "details": "Python 3.11-slim 기반 Dockerfile 작성 완료. FastAPI 0.104+, uvicorn 0.24+ 사용. requirements.txt에 필요 패키지 정의 완료 (fastapi, uvicorn, sqlalchemy, pymysql, redis, python-multipart). 환경변수로 DB_HOST, REDIS_HOST, MASTER_KEY 설정 완료. 포트 8000 노출. 헬스체크 엔드포인트 /health 구현 완료. MariaDB 및 Redis 연결 설정 완료. Pydantic 모델 충돌 문제 부분적 해결됨. OpenAPI 문서 생성 이슈 해결 필요.",
+        "testStrategy": "curl http://localhost:8000/health로 API 서버 상태 확인 완료. OpenAPI 문서 접근 테스트 (/docs) - 일부 문제 존재. 데이터베이스 및 Redis 연결 상태 확인 완료. Pydantic 모델 충돌 해결 검증 필요.",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "OpenAPI 문서 생성 문제 해결",
+            "description": "FastAPI OpenAPI 문서 생성 시 발생하는 문제를 진단하고 해결합니다.",
+            "status": "done",
+            "dependencies": [],
+            "details": "현재 /docs 엔드포인트 접근 시 일부 문제가 발생하고 있습니다. Pydantic 모델 정의, 라우터 설정, 스키마 생성 과정에서의 오류를 확인하고 수정합니다.",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Pydantic 모델 충돌 완전 해결",
+            "description": "부분적으로 해결된 Pydantic 모델 충돌 문제를 완전히 해결합니다.",
+            "status": "done",
+            "dependencies": [],
+            "details": "현재 부분적으로 해결된 Pydantic 모델 충돌 문제의 근본 원인을 파악하고 완전히 해결합니다. 모델 간 네이밍 충돌, 순환 참조, 타입 정의 문제 등을 점검합니다.",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "API 엔드포인트 기능 검증",
+            "description": "모든 API 엔드포인트의 정상 동작을 검증합니다.",
+            "status": "done",
+            "dependencies": [],
+            "details": "파일 업로드, 다운로드, 프로젝트 키 관리, 사용자 인증 등 주요 API 기능들이 정상적으로 동작하는지 테스트합니다.",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "컨테이너 안정성 및 성능 최적화",
+            "description": "컨테이너의 안정성을 확보하고 성능을 최적화합니다.",
+            "status": "done",
+            "dependencies": [],
+            "details": "메모리 사용량 최적화, 로그 설정 개선, 에러 핸들링 강화, 그레이스풀 셧다운 구현 등을 통해 프로덕션 환경에 적합한 컨테이너로 개선합니다.",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 13,
+        "title": "서비스 오케스트레이션 및 의존성 관리",
+        "description": "Docker Compose를 통해 모든 서비스의 시작 순서와 의존성을 관리하고, 발견된 API 타임아웃 문제를 해결합니다.",
+        "status": "done",
+        "dependencies": [
+          12
+        ],
+        "priority": "high",
+        "details": "depends_on 설정으로 서비스 시작 순서 제어 (mariadb → redis → api) 완료. healthcheck 설정으로 서비스 준비 상태 확인 완료. restart: unless-stopped 정책 적용 완료. 환경변수 파일(.env) 분리로 설정 관리 완료. 로그 드라이버 설정(json-file, max-size: 10m) 완료. 기본 인프라는 정상 동작하나 프로젝트 키 생성 API에서 Pydantic 모델 관련 타임아웃 문제 발생.",
+        "testStrategy": "docker-compose up -d로 전체 스택 시작 완료. docker-compose logs로 서비스 로그 확인 완료. 각 서비스의 헬스체크 상태 모니터링 완료. API 엔드포인트별 기능 테스트 및 타임아웃 문제 해결 확인.",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "프로젝트 키 생성 API 타임아웃 문제 분석",
+            "description": "프로젝트 키 생성 API에서 발생하는 타임아웃 문제의 원인을 분석합니다.",
+            "status": "done",
+            "dependencies": [],
+            "details": "Pydantic 모델 관련 타임아웃 문제 원인 파악. API 로그 분석 및 데이터베이스 쿼리 성능 확인. 메모리 사용량 및 처리 시간 모니터링.",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Pydantic 모델 최적화",
+            "description": "타임아웃을 유발하는 Pydantic 모델을 최적화합니다.",
+            "status": "done",
+            "dependencies": [],
+            "details": "프로젝트 키 생성 관련 Pydantic 모델 검토. 불필요한 검증 로직 제거. 모델 직렬화/역직렬화 성능 개선.",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "API 응답 시간 최적화",
+            "description": "프로젝트 키 생성 API의 응답 시간을 최적화합니다.",
+            "status": "done",
+            "dependencies": [],
+            "details": "데이터베이스 쿼리 최적화. 비동기 처리 개선. 캐시 활용 검토. API 타임아웃 설정 조정.",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "전체 API 엔드포인트 기능 테스트",
+            "description": "모든 API 엔드포인트의 정상 동작을 확인합니다.",
+            "status": "done",
+            "dependencies": [],
+            "details": "파일 업로드/다운로드 API 테스트. 프로젝트 키 관리 API 테스트. 사용자 관리 API 테스트. 각 엔드포인트별 응답 시간 측정.",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "서비스 모니터링 및 알림 설정",
+            "description": "서비스 상태 모니터링과 문제 발생 시 알림 체계를 구축합니다.",
+            "status": "done",
+            "dependencies": [],
+            "details": "Prometheus 메트릭 수집 확인. Grafana 대시보드 설정. API 응답 시간 및 에러율 모니터링. 임계값 기반 알림 설정.",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 14,
+        "title": "프로젝트 키 생성 API 구현 및 테스트",
+        "description": "마스터 키를 사용하여 프로젝트별 API 키를 생성하는 기능을 구현합니다.",
+        "details": "POST /api/v1/projects 엔드포인트 구현. 요청 본문: {\"project_name\": \"string\", \"master_key\": \"string\"}. JWT 토큰 기반 프로젝트 키 생성 (PyJWT 2.8+). 프로젝트명과 생성일시를 payload에 포함. 데이터베이스에 프로젝트 정보 저장. 응답: {\"project_key\": \"string\", \"project_id\": \"uuid\"}.",
+        "testStrategy": "curl -X POST -H 'Content-Type: application/json' -d '{\"project_name\":\"test\",\"master_key\":\"master123\"}' http://localhost:8000/api/v1/projects로 키 생성 테스트. JWT 토큰 디코딩으로 payload 검증.",
+        "priority": "high",
+        "dependencies": [
+          13
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 15,
+        "title": "파일 업로드 API 구현",
+        "description": "프로젝트 키를 사용하여 파일을 업로드하는 기능을 구현합니다.",
+        "details": "POST /api/v1/files/upload 엔드포인트 구현. multipart/form-data로 파일 업로드 처리. 헤더에 Authorization: Bearer {project_key} 인증. 파일 저장 경로: /app/uploads/{project_id}/{file_id}. 파일 메타데이터 DB 저장 (파일명, 크기, MIME 타입, 업로드 시간). UUID4로 파일 ID 생성. 응답: {\"file_id\": \"uuid\", \"download_url\": \"string\"}.",
+        "testStrategy": "다양한 파일 형식(txt, jpg, pdf, zip)으로 업로드 테스트. curl -X POST -H 'Authorization: Bearer {key}' -F 'file=@test.txt' http://localhost:8000/api/v1/files/upload 명령 사용. 파일 크기 제한 테스트.",
+        "priority": "high",
+        "dependencies": [
+          14
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 16,
+        "title": "파일 다운로드 API 구현",
+        "description": "파일 ID를 사용하여 업로드된 파일을 다운로드하는 기능을 구현합니다.",
+        "details": "GET /api/v1/files/{file_id}/download 엔드포인트 구현. 프로젝트 키 인증 필요. FileResponse로 파일 스트리밍 제공. Content-Disposition 헤더로 원본 파일명 설정. Range 요청 지원으로 부분 다운로드 가능. 다운로드 로그 기록. 파일 존재 여부 및 권한 검증.",
+        "testStrategy": "curl -H 'Authorization: Bearer {key}' http://localhost:8000/api/v1/files/{file_id}/download -o downloaded_file로 다운로드 테스트. 원본 파일과 다운로드 파일의 MD5 해시 비교. 파일 크기 일치성 확인.",
+        "priority": "high",
+        "dependencies": [
+          15
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 17,
+        "title": "파일 정보 조회 API 구현",
+        "description": "업로드된 파일의 메타데이터를 조회하는 기능을 구현합니다.",
+        "details": "GET /api/v1/files/{file_id} 엔드포인트 구현. 프로젝트 키 인증으로 해당 프로젝트 파일만 조회 가능. 응답 데이터: {\"file_id\": \"uuid\", \"filename\": \"string\", \"size\": \"number\", \"mime_type\": \"string\", \"uploaded_at\": \"datetime\", \"download_count\": \"number\"}. Redis 캐시로 조회 성능 최적화.",
+        "testStrategy": "curl -H 'Authorization: Bearer {key}' http://localhost:8000/api/v1/files/{file_id}로 파일 정보 조회. 존재하지 않는 파일 ID로 404 에러 테스트. 다른 프로젝트 파일 접근 시 403 에러 테스트.",
+        "priority": "medium",
+        "dependencies": [
+          15
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 18,
+        "title": "파일 목록 조회 API 구현",
+        "description": "프로젝트별 업로드된 파일 목록을 조회하는 기능을 구현합니다.",
+        "details": "GET /api/v1/files 엔드포인트 구현. 쿼리 파라미터: page, limit, sort_by, order. 프로젝트 키로 해당 프로젝트 파일만 필터링. 페이지네이션 구현 (기본 limit=20). 정렬 옵션: uploaded_at, filename, size. 응답: {\"files\": [...], \"total\": \"number\", \"page\": \"number\", \"limit\": \"number\"}.",
+        "testStrategy": "curl -H 'Authorization: Bearer {key}' 'http://localhost:8000/api/v1/files?page=1&limit=10'로 목록 조회. 페이지네이션 동작 확인. 정렬 옵션별 결과 검증.",
+        "priority": "medium",
+        "dependencies": [
+          17
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 19,
+        "title": "파일 삭제 API 구현",
+        "description": "업로드된 파일을 삭제하는 기능을 구현합니다.",
+        "details": "DELETE /api/v1/files/{file_id} 엔드포인트 구현. 프로젝트 키 인증으로 권한 검증. 물리적 파일 삭제 및 데이터베이스 레코드 삭제. 삭제 전 파일 존재 여부 확인. 삭제 로그 기록. 응답: {\"message\": \"File deleted successfully\", \"file_id\": \"uuid\"}. 트랜잭션으로 원자성 보장.",
+        "testStrategy": "curl -X DELETE -H 'Authorization: Bearer {key}' http://localhost:8000/api/v1/files/{file_id}로 삭제 테스트. 삭제 후 파일 조회 시 404 에러 확인. 물리적 파일 삭제 확인.",
+        "priority": "medium",
+        "dependencies": [
+          17
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 20,
+        "title": "기본 워크플로우 테스트 스크립트 작성",
+        "description": "키 생성부터 파일 업로드, 다운로드, 검증까지의 전체 워크플로우를 자동화하는 테스트 스크립트를 작성합니다.",
+        "details": "bash 스크립트로 전체 워크플로우 자동화. 단계: 1) API 헬스체크, 2) 프로젝트 키 생성, 3) 테스트 파일 생성, 4) 파일 업로드, 5) 파일 다운로드, 6) 무결성 검증(MD5), 7) 결과 리포트. jq 1.6+로 JSON 파싱. 각 단계별 에러 처리 및 롤백. 실행 시간 측정 및 로깅.",
+        "testStrategy": "./test_workflow.sh 실행으로 전체 테스트 수행. 각 단계별 성공/실패 상태 확인. 5분 이내 완료 시간 검증. 로그 파일 생성 및 결과 분석.",
+        "priority": "high",
+        "dependencies": [
+          16
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 21,
+        "title": "다양한 파일 형식 테스트 구현",
+        "description": "텍스트, 이미지, 바이너리, 대용량 파일 등 다양한 형식의 파일 업로드/다운로드를 테스트합니다.",
+        "details": "테스트 파일 생성: 1) 텍스트 파일(1KB, UTF-8), 2) 이미지 파일(PNG, 100KB), 3) 바이너리 파일(ZIP, 1MB), 4) 대용량 파일(10MB). 각 파일 형식별 MIME 타입 검증. 파일 크기별 업로드/다운로드 시간 측정. 동시 업로드 테스트(5개 파일). 메모리 사용량 모니터링.",
+        "testStrategy": "각 파일 형식별 업로드/다운로드 성공률 측정. 파일 무결성 검증(SHA256 해시). 성능 메트릭 수집 및 분석. 메모리 누수 확인.",
+        "priority": "medium",
+        "dependencies": [
+          20
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 22,
+        "title": "에러 처리 및 예외 상황 테스트",
+        "description": "잘못된 키, 존재하지 않는 파일, 네트워크 오류 등 다양한 에러 상황을 테스트합니다.",
+        "details": "테스트 시나리오: 1) 잘못된 프로젝트 키로 업로드 시도(401 에러), 2) 존재하지 않는 파일 다운로드(404 에러), 3) 파일 크기 제한 초과(413 에러), 4) 잘못된 MIME 타입(400 에러), 5) 데이터베이스 연결 실패 시뮬레이션, 6) Redis 연결 실패 테스트. 각 에러별 적절한 HTTP 상태 코드 및 에러 메시지 검증.",
+        "testStrategy": "각 에러 시나리오별 예상 응답 코드 확인. 에러 메시지 형식 검증. 로그 기록 확인. 서비스 복구 후 정상 동작 테스트.",
+        "priority": "medium",
+        "dependencies": [
+          20
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 23,
+        "title": "성능 및 안정성 테스트",
+        "description": "API 성능 측정, 동시 접속 처리, 메모리 사용량 등 시스템 안정성을 테스트합니다.",
+        "details": "성능 테스트 도구: Apache Bench(ab) 또는 wrk 사용. 테스트 항목: 1) 동시 사용자 100명 시뮬레이션, 2) 1000개 파일 업로드 부하 테스트, 3) 메모리 사용량 모니터링(docker stats), 4) 응답 시간 측정(평균, 95퍼센타일), 5) 처리량(TPS) 측정. 리소스 제한 테스트(CPU, 메모리 제한).",
+        "testStrategy": "부하 테스트 실행 및 결과 분석. 시스템 리소스 사용량 모니터링. 응답 시간 SLA 준수 확인(95% 요청이 1초 이내). 메모리 누수 및 성능 저하 확인.",
+        "priority": "medium",
+        "dependencies": [
+          21,
+          22
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 24,
+        "title": "테스트 결과 리포팅 및 문서화",
+        "description": "모든 테스트 결과를 종합하여 리포트를 생성하고 문서화합니다.",
+        "details": "테스트 결과 리포트 생성: 1) 실행 로그 수집 및 분석, 2) 성능 메트릭 시각화(CSV, 그래프), 3) 에러 로그 분류 및 해결 방안 제시, 4) 테스트 커버리지 리포트, 5) 시스템 구성 문서 업데이트. Markdown 형식으로 최종 리포트 작성. 테스트 자동화 스크립트 문서화.",
+        "testStrategy": "리포트 완성도 검증. 모든 테스트 시나리오 결과 포함 확인. 문서 가독성 및 정확성 검토. 재현 가능한 테스트 절차 문서화.",
+        "priority": "low",
+        "dependencies": [
+          23
+        ],
+        "status": "pending",
+        "subtasks": []
+      }
+    ],
+    "metadata": {
+      "created": "2025-08-01T01:34:06.334Z",
+      "updated": "2025-08-01T05:12:23.066Z",
+      "description": "Tasks for container-test context"
+    }
   }
 }

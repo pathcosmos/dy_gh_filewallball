@@ -188,7 +188,10 @@ class HealthCheckResponse(BaseModel):
     """헬스체크 응답 모델"""
 
     status: str = Field(
-        ..., description="시스템 상태", example="healthy", pattern="^(healthy|unhealthy)$"
+        ...,
+        description="시스템 상태",
+        example="healthy",
+        pattern="^(healthy|unhealthy)$",
     )
     timestamp: datetime = Field(
         ..., description="응답 시간", example="2024-01-15T10:30:00Z"

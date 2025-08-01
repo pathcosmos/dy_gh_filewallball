@@ -102,7 +102,7 @@ async def get_async_db() -> AsyncGenerator[AsyncSession, None]:
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
     """FastAPI dependency for async database session."""
-    async for session in get_async_db():
+    async with get_async_db() as session:
         yield session
 
 
