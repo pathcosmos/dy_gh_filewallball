@@ -6,16 +6,18 @@ Task 8.1: 파일 정보 조회 및 다운로드 API 리팩토링
 import mimetypes
 import os
 import time
+import uuid
 from datetime import datetime
 from typing import Any, Dict, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status, UploadFile, File, Header
 from fastapi.responses import StreamingResponse
 from sqlalchemy import or_, text
 from sqlalchemy.orm import Session, joinedload
 
 from app.dependencies.auth import get_current_user, get_optional_user
 from app.dependencies.database import get_db
+from app.services.project_key_service import ProjectKeyService
 
 # Prometheus 메트릭은 별도 모듈에서 import
 from app.metrics import (
@@ -35,6 +37,7 @@ from app.models.orm_models import (
     FileTag,
     FileTagRelation,
     FileView,
+    ProjectKey,
 )
 from app.services.cache_service import CacheService
 from app.services.rbac_service import rbac_service
@@ -46,6 +49,140 @@ from app.utils.logging_config import get_logger
 logger = get_logger(__name__)
 
 router = APIRouter()
+
+
+@router.post("/upload")
+async def upload_file(
+    file: UploadFile = File(...),
+    authorization: Optional[str] = Header(None),
+    db: Session = Depends(get_db),
+) -> Dict[str, Any]:
+    """
+    파일 업로드 API
+    Task 15: 파일 업로드 API 구현
+
+    Args:
+        file: 업로드할 파일
+        authorization: Bearer 토큰 (프로젝트 키)
+        db: 데이터베이스 세션
+
+    Returns:
+        Dict[str, Any]: 업로드 결과 (file_id, download_url 등)
+    """
+    try:
+        # 프로젝트 키 인증
+        if not authorization or not authorization.startswith("Bearer "):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Authorization header with Bearer token required"
+            )
+        
+        project_key = authorization.replace("Bearer ", "")
+        
+        # 프로젝트 키 검증
+        project_service = ProjectKeyService(db)
+        project_info = project_service.validate_project_key(project_key)
+        
+        if not project_info:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid project key"
+            )
+        
+        # 파일 크기 제한 (100MB)
+        max_file_size = 100 * 1024 * 1024  # 100MB
+        if file.size and file.size > max_file_size:
+            raise HTTPException(
+                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                detail="File size exceeds maximum limit of 100MB"
+            )
+        
+        # 파일 확장자 및 MIME 타입 확인
+        file_extension = os.path.splitext(file.filename)[1].lower() if file.filename else ""
+        mime_type = file.content_type or mimetypes.guess_type(file.filename or "")[0] or "application/octet-stream"
+        
+        # 파일 ID 생성 (UUID4)
+        file_id = str(uuid.uuid4())
+        
+        # 저장 경로 생성 (권한 문제 해결을 위해 임시 디렉토리 사용)
+        try:
+            project_upload_dir = os.path.join("/app/uploads", str(project_info.id))
+            os.makedirs(project_upload_dir, exist_ok=True)
+        except (PermissionError, OSError):
+            # 권한 문제 시 임시 디렉토리 사용
+            project_upload_dir = os.path.join("/tmp/uploads", str(project_info.id))
+            os.makedirs(project_upload_dir, exist_ok=True)
+        
+        # 파일 저장 경로
+        stored_filename = f"{file_id}{file_extension}"
+        file_path = os.path.join(project_upload_dir, stored_filename)
+        
+        # 파일 저장
+        try:
+            with open(file_path, "wb") as buffer:
+                content = await file.read()
+                buffer.write(content)
+        except Exception as e:
+            logger.error(f"Failed to save file: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to save uploaded file"
+            )
+        
+        # 파일 크기 확인
+        file_size = os.path.getsize(file_path)
+        
+        # 파일 해시 계산 (간단한 구현)
+        import hashlib
+        with open(file_path, "rb") as f:
+            file_hash = hashlib.sha256(f.read()).hexdigest()
+        
+        # 데이터베이스에 파일 정보 저장
+        file_info = FileInfo(
+            file_uuid=file_id,
+            original_filename=file.filename or "unknown",
+            stored_filename=stored_filename,
+            file_extension=file_extension,
+            mime_type=mime_type,
+            file_size=file_size,
+            file_hash=file_hash,
+            storage_path=os.path.join(str(project_info.id), stored_filename),
+            is_public=False,  # 기본적으로 비공개
+            project_id=project_info.id,
+            created_at=datetime.utcnow(),
+            updated_at=datetime.utcnow(),
+        )
+        
+        db.add(file_info)
+        db.commit()
+        db.refresh(file_info)
+        
+        # 다운로드 URL 생성
+        download_url = f"/api/v1/files/{file_id}/download"
+        
+        # 메트릭 업데이트
+        file_upload_counter.inc()
+        
+        logger.info(f"File uploaded successfully: {file_id}, size: {file_size}, project: {project_info.project_name}")
+        
+        return {
+            "file_id": file_id,
+            "download_url": download_url,
+            "original_filename": file.filename,
+            "file_size": file_size,
+            "mime_type": mime_type,
+            "message": "File uploaded successfully"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to upload file: {e}")
+        file_upload_error_counter.inc()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to upload file"
+        )
 
 
 @router.get("/")
@@ -576,12 +713,23 @@ async def download_file(
             )
 
         # 파일 존재 여부 확인
-        file_path = os.path.join(file_info.storage_path, file_info.stored_filename)
+        # storage_path는 상대 경로이므로 uploads 디렉토리와 결합
+        if file_info.storage_path.startswith('/'):
+            file_path = os.path.join(file_info.storage_path, file_info.stored_filename)
+        else:
+            # 상대 경로인 경우 uploads 디렉토리와 결합
+            file_path = os.path.join("/app/uploads", file_info.storage_path, file_info.stored_filename)
+            
         if not os.path.exists(file_path):
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="File not found on storage",
-            )
+            # 첫 번째 경로가 없으면 임시 디렉토리에서 시도
+            temp_file_path = os.path.join("/tmp/uploads", file_info.storage_path, file_info.stored_filename)
+            if os.path.exists(temp_file_path):
+                file_path = temp_file_path
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="File not found on storage",
+                )
 
         # 다운로드 시작 시간 기록
         download_start_time = time.time()
@@ -710,11 +858,21 @@ async def preview_image(
             )
 
         # 파일 경로 확인
-        file_path = os.path.join(settings.upload_dir, file_info.storage_path)
+        if file_info.storage_path.startswith('/'):
+            file_path = os.path.join(file_info.storage_path, file_info.stored_filename)
+        else:
+            # 상대 경로인 경우 uploads 디렉토리와 결합
+            file_path = os.path.join("/app/uploads", file_info.storage_path, file_info.stored_filename)
+            
         if not os.path.exists(file_path):
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="File not found on disk"
-            )
+            # 첫 번째 경로가 없으면 임시 디렉토리에서 시도
+            temp_file_path = os.path.join("/tmp/uploads", file_info.storage_path, file_info.stored_filename)
+            if os.path.exists(temp_file_path):
+                file_path = temp_file_path
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND, detail="File not found on disk"
+                )
 
         # MIME 타입 설정
         content_type = SUPPORTED_IMAGE_EXTENSIONS[file_extension]
@@ -802,12 +960,22 @@ async def get_thumbnail(
             )
 
         # 원본 파일 경로 확인
-        original_path = os.path.join(settings.upload_dir, file_info.storage_path)
+        if file_info.storage_path.startswith('/'):
+            original_path = os.path.join(file_info.storage_path, file_info.stored_filename)
+        else:
+            # 상대 경로인 경우 uploads 디렉토리와 결합
+            original_path = os.path.join("/app/uploads", file_info.storage_path, file_info.stored_filename)
+            
         if not os.path.exists(original_path):
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Original file not found on disk",
-            )
+            # 첫 번째 경로가 없으면 임시 디렉토리에서 시도
+            temp_original_path = os.path.join("/tmp/uploads", file_info.storage_path, file_info.stored_filename)
+            if os.path.exists(temp_original_path):
+                original_path = temp_original_path
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Original file not found on disk",
+                )
 
         # 썸네일 가져오기 (캐시 확인 후 필요시 생성)
         thumbnail_path = thumbnail_service.get_thumbnail(original_path, file_uuid, size)

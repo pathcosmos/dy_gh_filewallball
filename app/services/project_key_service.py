@@ -35,8 +35,17 @@ class ProjectKeyService:
         Returns:
             str: 생성된 프로젝트 키
         """
+        import secrets
+        import time
+        
+        # 현재 시간을 마이크로초 단위로 추가하여 고유성 보장
+        current_time = str(int(time.time() * 1000000))
+        
+        # 랜덤 솔트 추가
+        random_salt = secrets.token_hex(16)
+        
         # 입력 데이터를 결합하여 키 생성
-        key_data = f"{project_name}:{request_date}:{request_ip}:{self.MASTER_KEY}"
+        key_data = f"{project_name}:{request_date}:{request_ip}:{current_time}:{random_salt}:{self.MASTER_KEY}"
 
         # HMAC-SHA256을 사용하여 키 생성
         key_bytes = hmac.new(
@@ -74,6 +83,8 @@ class ProjectKeyService:
             request_date=request_date,
             request_ip=request_ip,
             is_active=True,
+            created_at=datetime.utcnow(),
+            updated_at=datetime.utcnow(),
         )
 
         self.db.add(db_project_key)
