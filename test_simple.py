@@ -1,16 +1,18 @@
 #!/usr/bin/env python3
 """FileWallBall 간단한 테스트 스크립트"""
 
-import requests
-import time
 import os
+import time
 from datetime import datetime
+
+import requests
 
 # 설정
 API_URL = "http://filewallball:8000"
 MASTER_KEY = "dysnt2025FileWallersBallKAuEZzTAsBjXiQ=="
 PROJECT_NAME = f"test-{int(time.time())}"
 REQUEST_DATE = datetime.now().strftime("%Y%m%d")
+
 
 def main():
     print("=== FileWallBall 간단한 테스트 ===")
@@ -37,7 +39,7 @@ def main():
         data = {
             "project_name": PROJECT_NAME,
             "request_date": REQUEST_DATE,
-            "master_key": MASTER_KEY
+            "master_key": MASTER_KEY,
         }
         r = requests.post(f"{API_URL}/keygen", data=data, timeout=10)
         if r.status_code == 200:
@@ -58,10 +60,10 @@ def main():
         content = f"Hello FileWallBall! {datetime.now()}"
         with open("test.txt", "w") as f:
             f.write(content)
-        
+
         files = {"file": ("test.txt", open("test.txt", "rb"), "text/plain")}
         data = {"project_key": project_key}
-        
+
         r = requests.post(f"{API_URL}/upload", files=files, data=data, timeout=30)
         if r.status_code == 200:
             result = r.json()
@@ -113,5 +115,6 @@ def main():
     print("\n🎉 모든 테스트가 성공했습니다!")
     return 0
 
+
 if __name__ == "__main__":
-    exit(main()) 
+    exit(main())

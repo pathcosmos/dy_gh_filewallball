@@ -200,7 +200,7 @@ pytest -m "not slow" -v
    ```bash
    # 서비스 상태 확인
    docker-compose -f docker-compose.test.yml ps
-   
+
    # 로그 확인
    docker-compose -f docker-compose.test.yml logs filewallball-test-app
    ```
@@ -209,7 +209,7 @@ pytest -m "not slow" -v
    ```bash
    # 데이터베이스 상태 확인
    docker-compose -f docker-compose.test.yml logs mariadb-test
-   
+
    # 수동 연결 테스트
    docker-compose -f docker-compose.test.yml exec mariadb-test mysql -u root -p
    ```
@@ -218,7 +218,7 @@ pytest -m "not slow" -v
    ```bash
    # Redis 상태 확인
    docker-compose -f docker-compose.test.yml logs redis-test
-   
+
    # 수동 연결 테스트
    docker-compose -f docker-compose.test.yml exec redis-test redis-cli ping
    ```
@@ -295,11 +295,11 @@ class TestFileService:
     @pytest.fixture
     def file_service(self):
         return FileService()
-    
+
     def test_upload_file(self, file_service):
         # 테스트 로직
         pass
-    
+
     @pytest.mark.integration
     def test_file_workflow(self, file_service):
         # 통합 테스트 로직
@@ -342,4 +342,11 @@ jobs:
 - [docs/testing-framework-guide.md](./docs/testing-framework-guide.md) - 테스트 프레임워크 상세 가이드
 - [docs/api-endpoints-guide.md](./docs/api-endpoints-guide.md) - API 엔드포인트 가이드
 - [pytest.ini](./pytest.ini) - pytest 설정
-- [docker-compose.test.yml](./docker-compose.test.yml) - 테스트 환경 설정 
+- [docker-compose.test.yml](./docker-compose.test.yml) - 테스트 환경 설정
+
+## 🆘 문제 해결
+
+문제가 발생하거나 추가 도움이 필요한 경우:
+1. 로그를 확인하세요
+2. 이 문서의 문제 해결 섹션을 참조하세요
+3. GitHub Issues에 문제를 보고하세요

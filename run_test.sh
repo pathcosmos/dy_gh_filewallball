@@ -52,17 +52,17 @@ show_help() {
 # Docker 및 Docker Compose 확인
 check_dependencies() {
     log_info "의존성 확인 중..."
-    
+
     if ! command -v docker &> /dev/null; then
         log_error "Docker가 설치되지 않았습니다."
         exit 1
     fi
-    
+
     if ! command -v docker-compose &> /dev/null && ! docker compose version &> /dev/null; then
         log_error "Docker Compose가 설치되지 않았습니다."
         exit 1
     fi
-    
+
     log_success "의존성 확인 완료"
 }
 
@@ -86,22 +86,22 @@ build_test() {
 start_api() {
     log_info "FileWallBall API 서버 시작 중..."
     $(get_docker_compose_cmd) up -d filewallball mariadb redis
-    
+
     log_info "API 서버 준비 대기 중..."
     local max_attempts=60
     local attempt=1
-    
+
     while [ $attempt -le $max_attempts ]; do
         if curl -s -f http://localhost:8001/health > /dev/null 2>&1; then
             log_success "API 서버 준비 완료"
             return 0
         fi
-        
+
         log_info "시도 $attempt/$max_attempts - API 서버 대기 중..."
         sleep 5
         attempt=$((attempt + 1))
     done
-    
+
     log_error "API 서버 시작 실패 (타임아웃)"
     return 1
 }
@@ -131,11 +131,11 @@ clean_test() {
 start_dev() {
     log_info "개발 환경 시작 중..."
     $(get_docker_compose_cmd) up -d
-    
+
     log_info "서비스 준비 대기 중..."
     local max_attempts=60
     local attempt=1
-    
+
     while [ $attempt -le $max_attempts ]; do
         if curl -s -f http://localhost:8001/health > /dev/null 2>&1; then
             log_success "개발 환경 준비 완료"
@@ -146,12 +146,12 @@ start_dev() {
             echo "📚 API 문서: http://localhost:8001/docs"
             return 0
         fi
-        
+
         log_info "시도 $attempt/$max_attempts - 서비스 대기 중..."
         sleep 5
         attempt=$((attempt + 1))
     done
-    
+
     log_error "개발 환경 시작 실패 (타임아웃)"
     return 1
 }
@@ -166,7 +166,7 @@ stop_all() {
 # 메인 실행 로직
 main() {
     local action=${1:-quick}
-    
+
     case $action in
         "quick")
             check_dependencies
@@ -206,4 +206,4 @@ main() {
 }
 
 # 스크립트 실행
-main "$@" 
+main "$@"

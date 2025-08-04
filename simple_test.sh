@@ -84,4 +84,4 @@ else
 fi
 
 log_success "간단한 API 테스트 완료"
-log_info "전체 워크플로우 테스트를 원한다면: ./test_full_workflow.sh" 
+log_info "전체 워크플로우 테스트를 원한다면: ./test_full_workflow.sh"

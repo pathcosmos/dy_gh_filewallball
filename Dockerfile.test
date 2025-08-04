@@ -42,4 +42,4 @@ COPY test_simple.py /app/
 RUN chmod +x /app/test_simple.py
 
 # 메인 진입점 설정
-ENTRYPOINT ["/bin/bash"] 
+ENTRYPOINT ["/bin/bash"]

@@ -24,4 +24,4 @@ scrape_configs:
     static_configs:
       - targets: ['redis-exporter:9121']
     metrics_path: /metrics
-    scheme: http 
+    scheme: http

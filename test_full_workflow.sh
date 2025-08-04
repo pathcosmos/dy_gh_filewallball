@@ -125,7 +125,7 @@ fi
 log_info "6. 파일 다운로드 중..."
 if curl -s -f -o "$DOWNLOAD_FILE" "$DOWNLOAD_URL"; then
     log_success "파일 다운로드 완료: $DOWNLOAD_FILE"
-    
+
     # 파일 내용 비교
     if cmp -s "$TEST_FILE" "$DOWNLOAD_FILE"; then
         log_success "업로드된 파일과 다운로드된 파일이 동일합니다"
@@ -233,4 +233,4 @@ log_info "생성된 프로젝트 키: $PROJECT_KEY"
 log_info "업로드된 파일 ID: $FILE_ID"
 log_info "테스트 디렉토리: $TEST_DIR"
 
-log_success "모든 테스트가 성공적으로 완료되었습니다!" 
+log_success "모든 테스트가 성공적으로 완료되었습니다!"

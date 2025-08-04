@@ -23,6 +23,8 @@ from prometheus_fastapi_instrumentator import Instrumentator
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from app.api.v1.files import router as files_router
+from app.api.v1.projects import router as projects_router
 from app.async_redis_client import get_async_redis_client
 from app.database import get_db
 from app.dependencies.auth import (
@@ -57,6 +59,7 @@ from app.middleware.security_headers import (
     SecurityHeadersMiddleware,
 )
 from app.models.api_models import (
+    ErrorResponse,
     ErrorStatisticsResponse,
     FileDuplicateResponse,
     UploadStatisticsResponse,
@@ -70,11 +73,8 @@ from app.models.swagger_models import (
     MetricsResponse,
     UploadResponse,
 )
-from app.models.api_models import ErrorResponse
 from app.routers.health import router as health_router
 from app.routers.ip_auth_router import router as ip_auth_router
-from app.api.v1.projects import router as projects_router
-from app.api.v1.files import router as files_router
 from app.services.advanced_rate_limiter import rate_limit_middleware
 from app.services.audit_log_service import AuditAction, AuditResult, audit_log_service
 from app.services.background_task_service import (
@@ -329,54 +329,53 @@ async def calculate_file_hash(file_id: str, file_path: Path):
     except Exception as e:
         print(f"해시 계산 실패: {e}")
 
-
-# 기존 업로드 엔드포인트 비활성화 - 라우터와 충돌 방지
-# @app.post(
-#     "/upload",
-#     response_model=UploadResponse,
-#     summary="파일 업로드 (프로젝트 키 검증)",
-#     description="""
-#     프로젝트 키를 검증하여 파일을 업로드하고 시스템에 저장합니다.
-#
-#     ## 기능
-#     - 프로젝트 키 유효성 검증
-#     - 최대 100MB 파일 업로드 지원
-#     - 파일 형식 검증 및 바이러스 스캔
-#     - 자동 썸네일 생성 (이미지 파일)
-#     - 파일 해시 계산 (백그라운드)
-#     - 업로드 통계 기록
-#     - 프로젝트별 파일 분류
-#
-#     ## 지원 파일 형식
-#     - 이미지: jpg, jpeg, png, gif, webp, bmp, tiff
-#     - 문서: pdf, doc, docx, xls, xlsx, ppt, pptx, txt
-#     - 비디오: mp4, avi, mov, wmv, flv, webm
-#     - 오디오: mp3, wav, flac, aac, ogg
-#     - 압축: zip, rar, 7z, tar, gz
-#
-#     ## 파라미터
-#     - `file`: 업로드할 파일 (필수)
-#     - `project_key`: 프로젝트 키 (필수)
-#
-#     ## 응답
-#     - `file_id`: 업로드된 파일의 고유 식별자
-#     - `filename`: 원본 파일명
-#     - `download_url`: 파일 다운로드 URL
-#     - `view_url`: 파일 미리보기 URL (지원되는 경우)
-#     - `message`: 성공 메시지
-#     - `project_name`: 프로젝트명
-#     """,
-#     tags=["파일 업로드"],
-#     responses=get_file_error_responses(),
-# )
-# 기존 업로드 함수 비활성화
-# async def upload_file(
-#     background_tasks: BackgroundTasks,
-#     file: UploadFile = File(..., description="업로드할 파일", example="document.pdf"),
-#     project_key: str = Form(..., description="프로젝트 키"),
-#     request: Request = None,
-#     db: Session = Depends(get_db),
-# ):
+    # 기존 업로드 엔드포인트 비활성화 - 라우터와 충돌 방지
+    # @app.post(
+    #     "/upload",
+    #     response_model=UploadResponse,
+    #     summary="파일 업로드 (프로젝트 키 검증)",
+    #     description="""
+    #     프로젝트 키를 검증하여 파일을 업로드하고 시스템에 저장합니다.
+    #
+    #     ## 기능
+    #     - 프로젝트 키 유효성 검증
+    #     - 최대 100MB 파일 업로드 지원
+    #     - 파일 형식 검증 및 바이러스 스캔
+    #     - 자동 썸네일 생성 (이미지 파일)
+    #     - 파일 해시 계산 (백그라운드)
+    #     - 업로드 통계 기록
+    #     - 프로젝트별 파일 분류
+    #
+    #     ## 지원 파일 형식
+    #     - 이미지: jpg, jpeg, png, gif, webp, bmp, tiff
+    #     - 문서: pdf, doc, docx, xls, xlsx, ppt, pptx, txt
+    #     - 비디오: mp4, avi, mov, wmv, flv, webm
+    #     - 오디오: mp3, wav, flac, aac, ogg
+    #     - 압축: zip, rar, 7z, tar, gz
+    #
+    #     ## 파라미터
+    #     - `file`: 업로드할 파일 (필수)
+    #     - `project_key`: 프로젝트 키 (필수)
+    #
+    #     ## 응답
+    #     - `file_id`: 업로드된 파일의 고유 식별자
+    #     - `filename`: 원본 파일명
+    #     - `download_url`: 파일 다운로드 URL
+    #     - `view_url`: 파일 미리보기 URL (지원되는 경우)
+    #     - `message`: 성공 메시지
+    #     - `project_name`: 프로젝트명
+    #     """,
+    #     tags=["파일 업로드"],
+    #     responses=get_file_error_responses(),
+    # )
+    # 기존 업로드 함수 비활성화
+    # async def upload_file(
+    #     background_tasks: BackgroundTasks,
+    #     file: UploadFile = File(..., description="업로드할 파일", example="document.pdf"),
+    #     project_key: str = Form(..., description="프로젝트 키"),
+    #     request: Request = None,
+    #     db: Session = Depends(get_db),
+    # ):
     # 기존 업로드 함수 내용 비활성화
     # """파일 업로드 API - 프로젝트 키 검증 및 강화된 검증"""
     # start_time = datetime.now()
@@ -616,201 +615,201 @@ async def calculate_file_hash(file_id: str, file_path: Path):
 #     description: Optional[str] = Query(None, description="파일 설명"),
 #     db: Session = Depends(get_db),
 # ):
-    # 기존 v2 업로드 함수 내용 비활성화
-    # """향상된 파일 업로드 API - Rate Limiting 및 표준화된 응답"""
-    # start_time = datetime.now()
-    # file_uuid = None
-    #
-    # # 서비스 초기화
-    # error_handler = ErrorHandlerService(db, str(UPLOAD_DIR))
-    # storage_service = FileStorageService(db, str(UPLOAD_DIR))
-    # metadata_service = MetadataService(db)
-    # rate_limiter = RateLimiterService(db, redis_client)
-    #
-    # # 클라이언트 IP 추출
-    # client_ip = rate_limiter.get_client_ip(request)
-    #
-    # try:
-    #     # 1. Rate Limiting 확인
-    #     is_hour_limited, hour_info = rate_limiter.is_rate_limited(
-    #         client_ip, "uploads_per_hour"
-    #     )
-    #     is_day_limited, day_info = rate_limiter.is_rate_limited(
-    #         client_ip, "uploads_per_day"
-    #     )
-    #
-    #     if is_hour_limited:
-    #         raise HTTPException(
-    #             status_code=429,
-    #             detail=f"시간당 업로드 제한 초과. {hour_info.get('reset_time', 0)}초 후 재시도 가능",
-    #         )
-    #
-    #     if is_day_limited:
-    #         raise HTTPException(
-    #             status_code=429,
-    #             detail=f"일일 업로드 제한 초과. {day_info.get('reset_time', 0)}초 후 재시도 가능",
-    #         )
-    #
-    #     # 2. 동시 업로드 제한 확인
-    #     if not rate_limiter.check_concurrent_uploads(client_ip):
-    #         raise HTTPException(
-    #             status_code=429,
-    #             detail="동시 업로드 제한 초과. 다른 업로드가 완료될 때까지 대기하세요",
-    #         )
-    #
-    #     # 3. 업로드 세션 시작
-    #     rate_limiter.start_upload_session(client_ip)
-    #
-    #     # 4. 파일 유효성 검사 (Task 12.4: 강화된 검증)
-    #     validation_result = await file_validation_service.validate_upload_file(file)
+# 기존 v2 업로드 함수 내용 비활성화
+# """향상된 파일 업로드 API - Rate Limiting 및 표준화된 응답"""
+# start_time = datetime.now()
+# file_uuid = None
+#
+# # 서비스 초기화
+# error_handler = ErrorHandlerService(db, str(UPLOAD_DIR))
+# storage_service = FileStorageService(db, str(UPLOAD_DIR))
+# metadata_service = MetadataService(db)
+# rate_limiter = RateLimiterService(db, redis_client)
+#
+# # 클라이언트 IP 추출
+# client_ip = rate_limiter.get_client_ip(request)
+#
+# try:
+#     # 1. Rate Limiting 확인
+#     is_hour_limited, hour_info = rate_limiter.is_rate_limited(
+#         client_ip, "uploads_per_hour"
+#     )
+#     is_day_limited, day_info = rate_limiter.is_rate_limited(
+#         client_ip, "uploads_per_day"
+#     )
+#
+#     if is_hour_limited:
+#         raise HTTPException(
+#             status_code=429,
+#             detail=f"시간당 업로드 제한 초과. {hour_info.get('reset_time', 0)}초 후 재시도 가능",
+#         )
+#
+#     if is_day_limited:
+#         raise HTTPException(
+#             status_code=429,
+#             detail=f"일일 업로드 제한 초과. {day_info.get('reset_time', 0)}초 후 재시도 가능",
+#         )
+#
+#     # 2. 동시 업로드 제한 확인
+#     if not rate_limiter.check_concurrent_uploads(client_ip):
+#         raise HTTPException(
+#             status_code=429,
+#             detail="동시 업로드 제한 초과. 다른 업로드가 완료될 때까지 대기하세요",
+#         )
+#
+#     # 3. 업로드 세션 시작
+#     rate_limiter.start_upload_session(client_ip)
+#
+#     # 4. 파일 유효성 검사 (Task 12.4: 강화된 검증)
+#     validation_result = await file_validation_service.validate_upload_file(file)
 
-        #     if not validation_result["is_valid"]:
-        #         # 검증 실패 시 에러 메트릭 업데이트
-        #         file_upload_error_counter.labels(
-        #             error_type="validation_error", file_type="unknown"
-        #         ).inc()
-        #         error_rate_counter.labels(
-        #             error_type="validation_error", endpoint="upload"
-        #         ).inc()
-        #
-        #         raise HTTPException(
-        #             status_code=status.HTTP_400_BAD_REQUEST,
-        #             detail={
-        #                 "message": "파일 검증에 실패했습니다",
-        #                 "errors": validation_result["errors"],
-        #                 "file_info": {
-        #                     "filename": file.filename,
-        #                     "detected_mime_type": validation_result.get("mime_type"),
-        #                     "file_size": validation_result.get("file_size"),
-        #                 },
-        #             },
-        #         )
-        #
-        #     # 5. 파일 크기 제한 확인 (Rate Limiter)
-        #     if not rate_limiter.check_file_size_limit(getattr(file, "size", 0), client_ip):
-        #         raise HTTPException(status_code=413, detail="파일 크기가 제한을 초과합니다")
-        #
-        #     # 6. 파일 저장
-        #     storage_result = await storage_service.save_file(file, file.filename)
-        #
-        #     if storage_result["is_duplicate"]:
-        #         # 중복 파일 응답
-        #         return FileDuplicateResponse(
-        #             file_uuid=storage_result["file_uuid"],
-        #             message=storage_result["message"],
-        #             existing_file_info=storage_result.get("existing_file"),
-        #         )
-        #
-        #     file_uuid = storage_result["file_uuid"]
-        #
-        #     # 7. 메타데이터 저장
-        #     metadata = {
-        #         "category_id": category_id,
-        #         "tags": tags,
-        #         "is_public": is_public,
-        #         "description": description,
-        #     }
-        #
-        #     metadata_result = await metadata_service.save_file_metadata(
-        #         file_uuid=file_uuid,
-        #         original_filename=file.filename,
-        #         stored_filename=storage_result["stored_filename"],
-        #         file_extension=storage_result["file_extension"],
-        #         mime_type=file.content_type,
-        #         file_size=storage_result["file_size"],
-        #         file_hash=storage_result["file_hash"],
-        #         storage_path=storage_result["storage_path"],
-        #         request=request,
-        #         metadata=metadata,
-        #     )
-        #
-        #     # 8. Rate Limiting 카운트 증가
-        #     rate_limiter.increment_request_count(client_ip, "uploads_per_hour")
-        #     rate_limiter.increment_request_count(client_ip, "uploads_per_day")
-        #
-        #     # 9. 성공 메트릭 업데이트
-        #     file_upload_counter.inc()
-        #     file_upload_duration.observe((datetime.now() - start_time).total_seconds())
-        #
-        #     # 10. 백그라운드 작업: 추가 처리
-        #     background_tasks.add_task(
-        #         calculate_file_hash, file_uuid, Path(storage_result["storage_path"])
-        #     )
-        #
-        #     # 11. URL 생성
-        #     base_url = os.getenv("BASE_URL", "http://localhost:8000")
-        #     download_url = f"{base_url}/download/{file_uuid}"
-        #     view_url = f"{base_url}/view/{file_uuid}"
-        #
-        #     # 12. 표준화된 응답 반환
-        #     return FileUploadResponse(
-        #         file_uuid=file_uuid,
-        #         original_filename=file.filename,
-        #         stored_filename=storage_result["stored_filename"],
-        #         file_size=storage_result["file_size"],
-        #         mime_type=file.content_type,
-        #         file_hash=storage_result["file_hash"],
-        #         category_id=category_id,
-        #         tags=tags or [],
-        #         is_public=is_public,
-        #         description=description,
-        #         upload_time=metadata_result["upload_time"],
-        #         upload_ip=metadata_result["upload_ip"],
-        #         processing_time_ms=int(
-        #             (datetime.now() - start_time).total_seconds() * 1000
-        #         ),
-        #     )
-        #     return FileUploadResponse(
-        #         file_uuid=file_uuid,
-        #         original_filename=file.filename,
-        #         stored_filename=storage_result["stored_filename"],
-        #         file_size=storage_result["file_size"],
-        #         mime_type=file.content_type,
-        #         file_hash=storage_result["file_hash"],
-        #         category_id=category_id,
-        #         tags=tags or [],
-        #         is_public=is_public,
-        #         description=description,
-        #         upload_time=metadata_result["upload_time"],
-        #         upload_ip=metadata_result["upload_ip"],
-        #         processing_time_ms=int(
-        #             (datetime.now() - start_time).total_seconds() * 1000
-        #         ),
-        #         download_url=download_url,
-        #         view_url=view_url,
-        #     )
-        #
-        # except Exception as e:
-        #     # 에러 처리 시스템을 통한 에러 처리
-        #     error_result = await error_handler.handle_upload_error(
-        #         error=e,
-        #         file_uuid=file_uuid or "unknown",
-        #         request=request,
-        #         context={
-        #             "upload_start_time": start_time.isoformat(),
-        #             "file_size": getattr(file, "size", 0),
-        #             "content_type": getattr(file, "content_type", "unknown"),
-        #             "filename": getattr(file, "filename", "unknown"),
-        #             "category_id": category_id,
-        #             "tags": tags,
-        #             "is_public": is_public,
-        #         },
-        #     )
-        #
-        #     # 에러 메트릭 업데이트
-        #     file_upload_error_counter.labels(
-        #         error_type=error_result["error_type"], file_type="unknown"
-        #     ).inc()
-        #
-        #     # 에러 응답 반환
-        #     return JSONResponse(
-        #         status_code=error_result["status_code"],
-        #         content=ErrorResponse(**error_result).dict(),
-        #     )
-        #
-        # finally:
-        #     # 업로드 세션 종료
-        #     rate_limiter.end_upload_session(client_ip)
+#     if not validation_result["is_valid"]:
+#         # 검증 실패 시 에러 메트릭 업데이트
+#         file_upload_error_counter.labels(
+#             error_type="validation_error", file_type="unknown"
+#         ).inc()
+#         error_rate_counter.labels(
+#             error_type="validation_error", endpoint="upload"
+#         ).inc()
+#
+#         raise HTTPException(
+#             status_code=status.HTTP_400_BAD_REQUEST,
+#             detail={
+#                 "message": "파일 검증에 실패했습니다",
+#                 "errors": validation_result["errors"],
+#                 "file_info": {
+#                     "filename": file.filename,
+#                     "detected_mime_type": validation_result.get("mime_type"),
+#                     "file_size": validation_result.get("file_size"),
+#                 },
+#             },
+#         )
+#
+#     # 5. 파일 크기 제한 확인 (Rate Limiter)
+#     if not rate_limiter.check_file_size_limit(getattr(file, "size", 0), client_ip):
+#         raise HTTPException(status_code=413, detail="파일 크기가 제한을 초과합니다")
+#
+#     # 6. 파일 저장
+#     storage_result = await storage_service.save_file(file, file.filename)
+#
+#     if storage_result["is_duplicate"]:
+#         # 중복 파일 응답
+#         return FileDuplicateResponse(
+#             file_uuid=storage_result["file_uuid"],
+#             message=storage_result["message"],
+#             existing_file_info=storage_result.get("existing_file"),
+#         )
+#
+#     file_uuid = storage_result["file_uuid"]
+#
+#     # 7. 메타데이터 저장
+#     metadata = {
+#         "category_id": category_id,
+#         "tags": tags,
+#         "is_public": is_public,
+#         "description": description,
+#     }
+#
+#     metadata_result = await metadata_service.save_file_metadata(
+#         file_uuid=file_uuid,
+#         original_filename=file.filename,
+#         stored_filename=storage_result["stored_filename"],
+#         file_extension=storage_result["file_extension"],
+#         mime_type=file.content_type,
+#         file_size=storage_result["file_size"],
+#         file_hash=storage_result["file_hash"],
+#         storage_path=storage_result["storage_path"],
+#         request=request,
+#         metadata=metadata,
+#     )
+#
+#     # 8. Rate Limiting 카운트 증가
+#     rate_limiter.increment_request_count(client_ip, "uploads_per_hour")
+#     rate_limiter.increment_request_count(client_ip, "uploads_per_day")
+#
+#     # 9. 성공 메트릭 업데이트
+#     file_upload_counter.inc()
+#     file_upload_duration.observe((datetime.now() - start_time).total_seconds())
+#
+#     # 10. 백그라운드 작업: 추가 처리
+#     background_tasks.add_task(
+#         calculate_file_hash, file_uuid, Path(storage_result["storage_path"])
+#     )
+#
+#     # 11. URL 생성
+#     base_url = os.getenv("BASE_URL", "http://localhost:8000")
+#     download_url = f"{base_url}/download/{file_uuid}"
+#     view_url = f"{base_url}/view/{file_uuid}"
+#
+#     # 12. 표준화된 응답 반환
+#     return FileUploadResponse(
+#         file_uuid=file_uuid,
+#         original_filename=file.filename,
+#         stored_filename=storage_result["stored_filename"],
+#         file_size=storage_result["file_size"],
+#         mime_type=file.content_type,
+#         file_hash=storage_result["file_hash"],
+#         category_id=category_id,
+#         tags=tags or [],
+#         is_public=is_public,
+#         description=description,
+#         upload_time=metadata_result["upload_time"],
+#         upload_ip=metadata_result["upload_ip"],
+#         processing_time_ms=int(
+#             (datetime.now() - start_time).total_seconds() * 1000
+#         ),
+#     )
+#     return FileUploadResponse(
+#         file_uuid=file_uuid,
+#         original_filename=file.filename,
+#         stored_filename=storage_result["stored_filename"],
+#         file_size=storage_result["file_size"],
+#         mime_type=file.content_type,
+#         file_hash=storage_result["file_hash"],
+#         category_id=category_id,
+#         tags=tags or [],
+#         is_public=is_public,
+#         description=description,
+#         upload_time=metadata_result["upload_time"],
+#         upload_ip=metadata_result["upload_ip"],
+#         processing_time_ms=int(
+#             (datetime.now() - start_time).total_seconds() * 1000
+#         ),
+#         download_url=download_url,
+#         view_url=view_url,
+#     )
+#
+# except Exception as e:
+#     # 에러 처리 시스템을 통한 에러 처리
+#     error_result = await error_handler.handle_upload_error(
+#         error=e,
+#         file_uuid=file_uuid or "unknown",
+#         request=request,
+#         context={
+#             "upload_start_time": start_time.isoformat(),
+#             "file_size": getattr(file, "size", 0),
+#             "content_type": getattr(file, "content_type", "unknown"),
+#             "filename": getattr(file, "filename", "unknown"),
+#             "category_id": category_id,
+#             "tags": tags,
+#             "is_public": is_public,
+#         },
+#     )
+#
+#     # 에러 메트릭 업데이트
+#     file_upload_error_counter.labels(
+#         error_type=error_result["error_type"], file_type="unknown"
+#     ).inc()
+#
+#     # 에러 응답 반환
+#     return JSONResponse(
+#         status_code=error_result["status_code"],
+#         content=ErrorResponse(**error_result).dict(),
+#     )
+#
+# finally:
+#     # 업로드 세션 종료
+#     rate_limiter.end_upload_session(client_ip)
 
 
 @app.get(
