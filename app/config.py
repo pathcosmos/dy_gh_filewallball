@@ -24,12 +24,12 @@ class Settings(BaseSettings):
     host: str = "0.0.0.0"
     port: int = 8000
 
-    # 데이터베이스 설정 - 로컬 개발용 SQLite
-    db_host: str = "localhost"
+    # 데이터베이스 설정 - MariaDB 컨테이너
+    db_host: str = "mariadb-service"
     db_port: int = 3306
-    db_name: str = "filewallball.db"
-    db_user: str = ""
-    db_password: str = ""
+    db_name: str = "filewallball_db"
+    db_user: str = "filewallball_user"
+    db_password: str = "filewallball_user_password"
     db_pool_size: int = 10
     db_max_overflow: int = 20
 
@@ -207,16 +207,13 @@ class Settings(BaseSettings):
 
         return config
 
-    # SQLite URL 생성
+    # MariaDB URL 생성
     @property
     def database_url(self) -> str:
-        if self.environment == "development" and self.db_host == "localhost":
-            return f"sqlite:///./{self.db_name}"
-        else:
-            return (
-                f"mysql+pymysql://{self.db_user}:{self.db_password}"
-                f"@{self.db_host}:{self.db_port}/{self.db_name}"
-            )
+        return (
+            f"mysql+pymysql://{self.db_user}:{self.db_password}"
+            f"@{self.db_host}:{self.db_port}/{self.db_name}"
+        )
 
     @property
     def redis_url(self) -> str:

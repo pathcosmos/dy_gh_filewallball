@@ -6,7 +6,7 @@ metadata:
   labels:
     app: redis
 spec:
-  storageClassName: microk8s-hostpath
+  storageClassName: local-path
   accessModes:
     - ReadWriteOnce
   resources:

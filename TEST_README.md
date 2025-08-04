@@ -1,247 +1,345 @@
 # FileWallBall 테스트 가이드
 
-이 문서는 Ubuntu 컨테이너에서 FileWallBall API의 전체 워크플로우를 테스트하는 방법을 설명합니다.
-
-## 📋 테스트 개요
-
-### 테스트 대상 기능
-- ✅ 프로젝트 키 생성 (`/keygen`)
-- ✅ 파일 업로드 (`/upload`)
-- ✅ 파일 다운로드 (`/download/{file_id}`)
-- ✅ 파일 정보 조회 (`/files/{file_id}`)
-- ✅ 파일 미리보기 (`/view/{file_id}`)
-- ✅ 고급 업로드 API (`/api/v1/files/upload`)
-- ✅ 업로드 통계 (`/api/v1/upload/statistics/{client_ip}`)
-- ✅ 시스템 메트릭 (`/metrics`)
-- ✅ 파일 목록 조회 (`/api/v1/files`)
-- ✅ 파일 검색 기능 (`/api/v1/files/search`)
-
-### 테스트 환경
-- **OS**: Ubuntu 22.04 (Docker 컨테이너)
-- **API 서버**: FileWallBall API (포트 8001)
-- **데이터베이스**: MariaDB
-- **캐시**: Redis
-- **모니터링**: Prometheus + Grafana
+이 문서는 FileWallBall 프로젝트의 테스트 실행 방법을 설명합니다. CLAUDE.md의 권장사항을 반영하여 작성되었습니다.
 
 ## 🚀 빠른 시작
 
-### 1. 의존성 확인
+### 컨테이너 기반 테스트 (권장)
+
 ```bash
-# Docker 및 Docker Compose 설치 확인
-docker --version
-docker-compose --version
+# 전체 테스트 실행
+./scripts/run-container-tests.sh
+
+# 특정 테스트 타입만 실행
+./scripts/run-container-tests.sh unit        # Unit 테스트만
+./scripts/run-container-tests.sh integration # Integration 테스트만
+./scripts/run-container-tests.sh api         # API 테스트만
+./scripts/run-container-tests.sh pytest      # 전체 pytest 실행
 ```
 
-### 2. 테스트 실행
+### 로컬 테스트
 
-#### 빠른 테스트 (기본)
 ```bash
-./run_test.sh quick
+# 빠른 테스트 (기본 기능만)
+./scripts/test-quick.sh
+
+# 전체 워크플로우 테스트
+./scripts/test-full-workflow.sh
+
+# API 테스트
+./scripts/test-api.sh
 ```
+
+## 📋 테스트 종류
+
+### 1. 컨테이너 기반 테스트 (권장)
+
+**장점:**
+- 전체 서비스 의존성 포함 (MariaDB, Redis)
+- 격리된 테스트 환경
+- 프로덕션과 유사한 환경
+- 자동 정리 및 결과 수집
+
+**사용법:**
+```bash
+# 전체 테스트 스위트
+./scripts/run-container-tests.sh
+
+# 도움말 보기
+./scripts/run-container-tests.sh --help
+```
+
+**테스트 타입:**
+- `unit`: Unit 테스트만 실행 (pytest tests/unit/)
+- `integration`: Integration 테스트만 실행 (pytest tests/integration/)
+- `api`: API 테스트만 실행 (scripts/test-api.sh)
+- `pytest`: 전체 pytest 실행 (pytest tests/)
+- `all`: 전체 테스트 스위트 실행 (기본값)
+
+### 2. 로컬 테스트
+
+#### 빠른 테스트
+```bash
+./scripts/test-quick.sh
+```
+- 기본적인 API 기능만 빠르게 확인
+- 8개의 핵심 테스트
+- 약 1-2분 소요
 
 #### 전체 워크플로우 테스트
 ```bash
-./run_test.sh full
+./scripts/test-full-workflow.sh
 ```
+- 파일 업로드부터 삭제까지 전체 과정 테스트
+- V1/V2 API 모두 테스트
+- 파일 내용 검증 포함
+- 약 3-5분 소요
 
-#### 개발 환경 시작
+#### API 테스트
 ```bash
-./run_test.sh dev
+./scripts/test-api.sh
+```
+- 15개의 API 엔드포인트 테스트
+- 보안, 메트릭스, RBAC 등 포함
+- 약 2-3분 소요
+
+## 🧪 테스트 환경
+
+### 컨테이너 환경 구성
+
+```yaml
+# docker-compose.test.yml
+services:
+  mariadb-test:    # 테스트용 MariaDB
+  redis-test:      # 테스트용 Redis
+  filewallball-test-app:  # 테스트용 API 서버
+  pytest-runner:   # Python 테스트 실행기
+  api-test-runner: # API 테스트 실행기
 ```
 
-## 📖 상세 사용법
-
-### 테스트 스크립트 옵션
+### 환경 변수
 
 ```bash
-./run_test.sh [옵션]
+# API 설정
+API_BASE_URL=http://localhost:8000
+TEST_RESULTS_DIR=test_results
+UPLOAD_DIR=test_uploads
+
+# 데이터베이스 설정
+DB_HOST=mariadb-test
+DB_NAME=filewallball_test_db
+DB_USER=filewallball_test_user
+DB_PASSWORD=filewallball_test_password
+
+# Redis 설정
+REDIS_HOST=redis-test
+REDIS_PASSWORD=filewallball_test_2024
 ```
 
-| 옵션 | 설명 |
-|------|------|
-| `quick` | 빠른 테스트 실행 (기본값) |
-| `full` | 전체 워크플로우 테스트 실행 |
-| `build` | 테스트 컨테이너만 빌드 |
-| `clean` | 테스트 환경 정리 |
-| `dev` | 개발 환경 전체 시작 |
-| `stop` | 모든 서비스 중지 |
-| `help` | 도움말 표시 |
+## 📊 테스트 결과
 
-### Makefile 사용
+### 결과 파일 위치
+
+```
+test_results/
+├── htmlcov/                    # HTML 커버리지 리포트
+│   └── index.html
+├── junit.xml                   # JUnit XML 리포트
+├── service_logs.txt            # 서비스 로그
+├── api_test_summary.txt        # API 테스트 요약
+├── workflow_test_summary.txt   # 워크플로우 테스트 요약
+├── quick_test_summary.txt      # 빠른 테스트 요약
+└── *.log                       # 개별 테스트 로그
+```
+
+### 결과 확인
 
 ```bash
-# Makefile.test 사용
-make -f Makefile.test help
-make -f Makefile.test run-quick-test
-make -f Makefile.test run-full-test
-make -f Makefile.test dev-start
+# HTML 커버리지 리포트 보기
+open test_results/htmlcov/index.html
+
+# 테스트 요약 확인
+cat test_results/api_test_summary.txt
+cat test_results/workflow_test_summary.txt
+cat test_results/quick_test_summary.txt
+
+# 서비스 로그 확인
+tail -f test_results/service_logs.txt
 ```
 
-## 🔧 수동 테스트 실행
+## 🔧 Makefile 사용법
 
-### 1. API 서버 시작
 ```bash
-# 모든 서비스 시작
-docker-compose up -d
-
-# API 서버만 시작
-docker-compose up -d filewallball mariadb redis
+# 테스트 관련 명령어
+make -f Makefile.test help          # 도움말
+make -f Makefile.test build-test    # 테스트 컨테이너 빌드
+make -f Makefile.test run-test      # 전체 테스트 실행
+make -f Makefile.test run-quick-test # 빠른 테스트 실행
+make -f Makefile.test run-full-test # 전체 워크플로우 테스트
+make -f Makefile.test clean-test    # 테스트 정리
+make -f Makefile.test logs-test     # 테스트 로그 확인
 ```
 
-### 2. 테스트 컨테이너 빌드
+## 🐍 Python 테스트
+
+### 로컬 Python 테스트
+
 ```bash
-docker-compose build filewallball-test
+# uv 사용 (권장)
+uv run pytest tests/ -v
+uv run pytest tests/unit/ -v
+uv run pytest tests/integration/ -v
+
+# pip 사용
+pip install -r requirements.txt
+pytest tests/ -v
+
+# 커버리지와 함께
+pytest tests/ --cov=app --cov-report=html
 ```
 
-### 3. 테스트 실행
+### 특정 테스트 실행
+
 ```bash
-# 빠른 테스트
-docker-compose --profile test run --rm filewallball-test /app/quick_test.sh
+# 특정 테스트 파일
+pytest tests/unit/test_file_service.py -v
 
-# 전체 테스트
-docker-compose --profile test run --rm filewallball-test /app/test_full_workflow.sh
+# 특정 테스트 함수
+pytest tests/unit/test_file_service.py::test_upload_file -v
+
+# 마커 사용
+pytest -m "slow" -v
+pytest -m "not slow" -v
 ```
 
-## 📊 테스트 결과 확인
-
-### API 엔드포인트 접근
-- **API 서버**: http://localhost:8001
-- **API 문서**: http://localhost:8001/docs
-- **Grafana**: http://localhost:3000 (admin/admin)
-- **Prometheus**: http://localhost:9090
-
-### 로그 확인
-```bash
-# API 서버 로그
-docker-compose logs filewallball
-
-# 테스트 컨테이너 로그
-docker-compose --profile test logs filewallball-test
-
-# 모든 서비스 로그
-docker-compose logs
-```
-
-## 🧪 테스트 시나리오
-
-### 1. 프로젝트 키 생성
-```bash
-curl -X POST "http://localhost:8001/keygen" \
-  -F "project_name=test-project" \
-  -F "request_date=20241201" \
-  -F "master_key=dysnt2025FileWallersBallKAuEZzTAsBjXiQ=="
-```
-
-### 2. 파일 업로드
-```bash
-curl -X POST "http://localhost:8001/upload" \
-  -F "file=@test_file.txt" \
-  -F "project_key=YOUR_PROJECT_KEY"
-```
-
-### 3. 파일 다운로드
-```bash
-curl -X GET "http://localhost:8001/download/FILE_ID" \
-  -o downloaded_file.txt
-```
-
-### 4. 파일 정보 조회
-```bash
-curl -X GET "http://localhost:8001/files/FILE_ID"
-```
-
-## 🔍 문제 해결
+## 🚨 문제 해결
 
 ### 일반적인 문제
 
-#### 1. API 서버 연결 실패
+1. **API 서비스 연결 실패**
+   ```bash
+   # 서비스 상태 확인
+   docker-compose -f docker-compose.test.yml ps
+   
+   # 로그 확인
+   docker-compose -f docker-compose.test.yml logs filewallball-test-app
+   ```
+
+2. **데이터베이스 연결 실패**
+   ```bash
+   # 데이터베이스 상태 확인
+   docker-compose -f docker-compose.test.yml logs mariadb-test
+   
+   # 수동 연결 테스트
+   docker-compose -f docker-compose.test.yml exec mariadb-test mysql -u root -p
+   ```
+
+3. **Redis 연결 실패**
+   ```bash
+   # Redis 상태 확인
+   docker-compose -f docker-compose.test.yml logs redis-test
+   
+   # 수동 연결 테스트
+   docker-compose -f docker-compose.test.yml exec redis-test redis-cli ping
+   ```
+
+### 테스트 환경 정리
+
 ```bash
-# 서비스 상태 확인
-docker-compose ps
+# 완전 정리
+docker-compose -f docker-compose.test.yml down -v --remove-orphans
+docker system prune -f
+rm -rf test_results test_uploads
 
-# 로그 확인
-docker-compose logs filewallball
-
-# 포트 확인
-netstat -tlnp | grep 8001
+# 부분 정리
+make -f Makefile.test clean-test
 ```
 
-#### 2. 데이터베이스 연결 실패
+## 📈 성능 테스트
+
 ```bash
-# MariaDB 상태 확인
-docker-compose logs mariadb
+# 성능 테스트 실행
+python scripts/performance_test.py
 
-# 데이터베이스 연결 테스트
-docker-compose exec mariadb mysql -u filewallball_user -p filewallball_db
+# Redis 성능 테스트
+python scripts/redis-performance-test.py
+
+# 데이터베이스 성능 테스트
+python scripts/test_database_performance.py
 ```
 
-#### 3. Redis 연결 실패
+## 🔍 모니터링
+
+### 테스트 중 모니터링
+
 ```bash
-# Redis 상태 확인
-docker-compose logs redis
+# 실시간 로그 확인
+docker-compose -f docker-compose.test.yml logs -f
 
-# Redis 연결 테스트
-docker-compose exec redis redis-cli ping
+# 메트릭스 확인
+curl http://localhost:8000/metrics
+
+# 상세 메트릭스
+curl http://localhost:8000/api/v1/metrics/detailed
 ```
 
-### 로그 레벨 조정
+### 테스트 후 분석
+
 ```bash
-# 환경 변수로 로그 레벨 설정
-export LOG_LEVEL=DEBUG
-docker-compose up -d
+# 커버리지 분석
+open test_results/htmlcov/index.html
+
+# 성능 분석
+python scripts/performance_analyzer.py
+
+# 로그 분석
+grep "ERROR" test_results/service_logs.txt
+grep "WARNING" test_results/service_logs.txt
 ```
 
-## 📁 파일 구조
+## 📝 테스트 작성 가이드
 
+### 새로운 테스트 추가
+
+1. **Unit 테스트**: `tests/unit/`
+2. **Integration 테스트**: `tests/integration/`
+3. **E2E 테스트**: `tests/e2e/`
+
+### 테스트 구조
+
+```python
+import pytest
+from app.services.file_service import FileService
+
+class TestFileService:
+    @pytest.fixture
+    def file_service(self):
+        return FileService()
+    
+    def test_upload_file(self, file_service):
+        # 테스트 로직
+        pass
+    
+    @pytest.mark.integration
+    def test_file_workflow(self, file_service):
+        # 통합 테스트 로직
+        pass
 ```
-.
-├── test_full_workflow.sh      # 전체 워크플로우 테스트 스크립트
-├── quick_test.sh             # 빠른 테스트 스크립트
-├── wait_for_api.sh           # API 서버 대기 스크립트
-├── run_test.sh               # 테스트 실행 메인 스크립트
-├── Dockerfile.test           # 테스트 컨테이너 Dockerfile
-├── Makefile.test             # 테스트용 Makefile
-├── docker-compose.yml        # Docker Compose 설정
-├── test_results/             # 테스트 결과 저장 디렉토리
-└── TEST_README.md           # 이 파일
+
+### 테스트 마커
+
+```python
+@pytest.mark.slow      # 느린 테스트
+@pytest.mark.integration  # 통합 테스트
+@pytest.mark.api       # API 테스트
+@pytest.mark.unit      # 단위 테스트
 ```
 
-## 🔐 보안 정보
+## 🎯 CI/CD 통합
 
-### 마스터 키
-- **마스터 키**: `dysnt2025FileWallersBallKAuEZzTAsBjXiQ==`
-- **용도**: 프로젝트 키 생성 시 인증
-- **주의**: 프로덕션 환경에서는 변경 필요
+### GitHub Actions 예시
 
-### 프로젝트 키 생성 규칙
-- 프로젝트명 + 요청날짜 + IP 주소 + 마스터 키로 HMAC-SHA256 생성
-- Base64 인코딩으로 변환
-- 데이터베이스에 저장 및 검증
+```yaml
+name: Tests
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Run container tests
+        run: ./scripts/run-container-tests.sh
+      - name: Upload test results
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-results
+          path: test_results/
+```
 
-## 📈 모니터링
+## 📚 추가 리소스
 
-### Prometheus 메트릭
-- 파일 업로드 성공/실패 카운터
-- 업로드 시간 히스토그램
-- 파일 타입별 통계
-- 에러 타입별 분류
-
-### Grafana 대시보드
-- 실시간 업로드 통계
-- 시스템 성능 모니터링
-- 에러율 추적
-- 사용량 분석
-
-## 🚨 주의사항
-
-1. **포트 충돌**: 8001, 3306, 6379, 3000, 9090 포트가 사용됩니다.
-2. **데이터 보존**: 테스트 후 데이터베이스와 업로드 파일이 보존됩니다.
-3. **리소스 사용**: 전체 환경 실행 시 충분한 메모리와 디스크 공간이 필요합니다.
-4. **네트워크**: Docker 네트워크 설정이 올바르게 되어야 합니다.
-
-## 📞 지원
-
-문제가 발생하거나 추가 도움이 필요한 경우:
-1. 로그를 확인하세요
-2. 이 문서의 문제 해결 섹션을 참조하세요
-3. GitHub Issues에 문제를 보고하세요 
+- [CLAUDE.md](./CLAUDE.md) - 개발 가이드
+- [docs/testing-framework-guide.md](./docs/testing-framework-guide.md) - 테스트 프레임워크 상세 가이드
+- [docs/api-endpoints-guide.md](./docs/api-endpoints-guide.md) - API 엔드포인트 가이드
+- [pytest.ini](./pytest.ini) - pytest 설정
+- [docker-compose.test.yml](./docker-compose.test.yml) - 테스트 환경 설정 

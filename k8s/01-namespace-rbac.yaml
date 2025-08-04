@@ -136,3 +136,13 @@ spec:
       port: 443
     - protocol: TCP
       port: 80
+  # Database and Redis access within namespace
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: filewallball
+    ports:
+    - protocol: TCP
+      port: 3306  # MariaDB
+    - protocol: TCP
+      port: 6379  # Redis

@@ -20,7 +20,20 @@ from sqlalchemy import (
     UniqueConstraint,
 )
 from sqlalchemy.dialects.mysql import JSON
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+try:
+    from sqlalchemy.orm import Mapped, mapped_column, relationship
+    SQLALCHEMY_2 = True
+except ImportError:
+    # SQLAlchemy 1.4 compatibility
+    from sqlalchemy.orm import relationship
+    from sqlalchemy import Column
+    from typing import TYPE_CHECKING
+    if TYPE_CHECKING:
+        from typing import Any as Mapped
+    else:
+        Mapped = lambda x: x  # noqa
+    mapped_column = Column
+    SQLALCHEMY_2 = False
 
 from .base import Base
 

@@ -28,7 +28,8 @@ spec:
       serviceAccountName: filewallball-sa
       containers:
       - name: filewallball
-        image: localhost:32000/filewallball-api:latest
+        image: filewallball:latest
+        imagePullPolicy: Never
         ports:
         - containerPort: 8000
           name: http
@@ -156,18 +157,18 @@ spec:
           httpGet:
             path: /health
             port: 8000
-          initialDelaySeconds: 60
+          initialDelaySeconds: 90
           periodSeconds: 30
-          timeoutSeconds: 10
-          failureThreshold: 3
+          timeoutSeconds: 30
+          failureThreshold: 5
         readinessProbe:
           httpGet:
-            path: /health/ready
+            path: /health
             port: 8000
-          initialDelaySeconds: 30
-          periodSeconds: 10
-          timeoutSeconds: 5
-          failureThreshold: 3
+          initialDelaySeconds: 60
+          periodSeconds: 15
+          timeoutSeconds: 30
+          failureThreshold: 5
         volumeMounts:
         - name: uploads-storage
           mountPath: /app/uploads

@@ -2,8 +2,8 @@
 
 set -e
 
-# FileWallBall API 테스트 스크립트
-echo "🧪 FileWallBall API 테스트 시작..."
+# FileWallBall 빠른 테스트 스크립트
+echo "⚡ FileWallBall 빠른 테스트 시작..."
 
 # 색상 정의
 RED='\033[0;31m'
@@ -82,7 +82,7 @@ run_test() {
 check_api_health() {
     log_step "API 서비스 헬스체크..."
     
-    local max_attempts=30
+    local max_attempts=10  # 빠른 테스트는 더 짧은 대기 시간
     local attempt=1
     
     while [ $attempt -le $max_attempts ]; do
@@ -92,7 +92,7 @@ check_api_health() {
         fi
         
         log_info "API 서비스 대기 중... (시도 $attempt/$max_attempts)"
-        sleep 2
+        sleep 1
         attempt=$((attempt + 1))
     done
     
@@ -103,96 +103,61 @@ check_api_health() {
 # API 헬스체크
 check_api_health
 
-log_step "API 테스트 시작..."
+log_step "빠른 테스트 시작..."
 
-# 1. 기본 헬스체크 테스트
-run_test "health_check" \
+# 1. 기본 헬스체크
+run_test "quick_health_check" \
     "curl -s -w 'HTTP/%{http_code}' -o /dev/null '$API_BASE_URL/health'" \
     "200"
 
-# 2. 메트릭스 엔드포인트 테스트
-run_test "metrics_endpoint" \
+# 2. 메트릭스 엔드포인트 (빠른 확인)
+run_test "quick_metrics" \
     "curl -s -w 'HTTP/%{http_code}' -o /dev/null '$API_BASE_URL/metrics'" \
     "200"
 
-# 3. API 문서 엔드포인트 테스트
-run_test "api_docs" \
+# 3. API 문서 엔드포인트
+run_test "quick_api_docs" \
     "curl -s -w 'HTTP/%{http_code}' -o /dev/null '$API_BASE_URL/docs'" \
     "200"
 
-# 4. OpenAPI 스키마 테스트
-run_test "openapi_schema" \
-    "curl -s -w 'HTTP/%{http_code}' -o /dev/null '$API_BASE_URL/openapi.json'" \
-    "200"
+# 4. 빠른 파일 업로드 테스트 (V1)
+log_step "빠른 V1 업로드 테스트..."
+TEST_FILE="$UPLOAD_DIR/quick_test.txt"
+echo "Quick test content" > "$TEST_FILE"
 
-# 5. 기본 업로드 API 테스트 (V1)
-log_step "V1 업로드 API 테스트..."
-TEST_FILE="$UPLOAD_DIR/test_v1_upload.txt"
-echo "Test content for V1 upload API" > "$TEST_FILE"
-
-run_test "v1_upload_api" \
+run_test "quick_v1_upload" \
     "curl -s -w 'HTTP/%{http_code}' -X POST -F 'file=@$TEST_FILE' '$API_BASE_URL/upload'" \
     "200"
 
-# 6. 고급 업로드 API 테스트 (V2)
-log_step "V2 업로드 API 테스트..."
-TEST_FILE_V2="$UPLOAD_DIR/test_v2_upload.txt"
-echo "Test content for V2 upload API with enhanced features" > "$TEST_FILE_V2"
+# 5. 빠른 파일 업로드 테스트 (V2)
+log_step "빠른 V2 업로드 테스트..."
+TEST_FILE_V2="$UPLOAD_DIR/quick_test_v2.txt"
+echo "Quick test content for V2" > "$TEST_FILE_V2"
 
-run_test "v2_upload_api" \
+run_test "quick_v2_upload" \
     "curl -s -w 'HTTP/%{http_code}' -X POST -F 'file=@$TEST_FILE_V2' '$API_BASE_URL/api/v1/files/upload'" \
     "200"
 
-# 7. 파일 목록 API 테스트
-run_test "files_list_api" \
+# 6. 파일 목록 조회 (빠른 확인)
+run_test "quick_files_list" \
     "curl -s -w 'HTTP/%{http_code}' -o /dev/null '$API_BASE_URL/api/v1/files/list'" \
     "200"
 
-# 8. 보안 헤더 테스트
-run_test "security_headers_test" \
+# 7. 보안 헤더 테스트 (빠른 확인)
+run_test "quick_security_headers" \
     "curl -s -w 'HTTP/%{http_code}' -o /dev/null '$API_BASE_URL/api/v1/security/headers-test'" \
     "200"
 
-# 9. 검증 정책 테스트
-run_test "validation_policy_test" \
-    "curl -s -w 'HTTP/%{http_code}' -o /dev/null '$API_BASE_URL/api/v1/validation/policy'" \
-    "200"
-
-# 10. 상세 메트릭스 테스트
-run_test "detailed_metrics_test" \
+# 8. 상세 메트릭스 (빠른 확인)
+run_test "quick_detailed_metrics" \
     "curl -s -w 'HTTP/%{http_code}' -o /dev/null '$API_BASE_URL/api/v1/metrics/detailed'" \
     "200"
 
-# 11. RBAC 권한 테스트
-run_test "rbac_permissions_test" \
-    "curl -s -w 'HTTP/%{http_code}' -o /dev/null '$API_BASE_URL/api/v1/rbac/permissions'" \
-    "200"
-
-# 12. 감사 로그 테스트
-run_test "audit_logs_test" \
-    "curl -s -w 'HTTP/%{http_code}' -o /dev/null '$API_BASE_URL/api/v1/audit/logs'" \
-    "200"
-
-# 13. 프로젝트 키 관리 테스트
-run_test "project_keys_test" \
-    "curl -s -w 'HTTP/%{http_code}' -o /dev/null '$API_BASE_URL/api/v1/projects/keys'" \
-    "200"
-
-# 14. IP 인증 테스트
-run_test "ip_auth_test" \
-    "curl -s -w 'HTTP/%{http_code}' -o /dev/null '$API_BASE_URL/api/v1/ip-auth/status'" \
-    "200"
-
-# 15. 캐시 상태 테스트
-run_test "cache_status_test" \
-    "curl -s -w 'HTTP/%{http_code}' -o /dev/null '$API_BASE_URL/api/v1/cache/status'" \
-    "200"
-
 # 테스트 결과 요약
-log_step "테스트 결과 요약..."
+log_step "빠른 테스트 결과 요약..."
 
 echo ""
-echo "📊 API 테스트 결과:"
+echo "📊 빠른 테스트 결과:"
 echo "=================="
 echo "총 테스트 수: $TOTAL_TESTS"
 echo "통과: $PASSED_TESTS"
@@ -201,9 +166,9 @@ echo "성공률: $((PASSED_TESTS * 100 / TOTAL_TESTS))%"
 echo ""
 
 # 결과를 파일로 저장
-cat > "$TEST_RESULTS_DIR/api_test_summary.txt" << EOF
-API 테스트 결과 요약
-==================
+cat > "$TEST_RESULTS_DIR/quick_test_summary.txt" << EOF
+빠른 테스트 결과 요약
+====================
 실행 시간: $(date)
 API 베이스 URL: $API_BASE_URL
 총 테스트 수: $TOTAL_TESTS
@@ -211,13 +176,26 @@ API 베이스 URL: $API_BASE_URL
 실패: $FAILED_TESTS
 성공률: $((PASSED_TESTS * 100 / TOTAL_TESTS))%
 
-테스트 세부사항:
-$(ls -la "$TEST_RESULTS_DIR"/*.log 2>/dev/null | wc -l) 개의 상세 로그 파일이 생성되었습니다.
+빠른 테스트 내용:
+1. API 헬스체크
+2. 메트릭스 엔드포인트 확인
+3. API 문서 엔드포인트 확인
+4. V1 업로드 API 테스트
+5. V2 업로드 API 테스트
+6. 파일 목록 조회
+7. 보안 헤더 테스트
+8. 상세 메트릭스 확인
+
+이 테스트는 기본적인 API 기능만 빠르게 확인합니다.
+전체 기능 테스트를 원한다면 test-full-workflow.sh를 실행하세요.
 EOF
+
+# 정리
+rm -f "$TEST_FILE" "$TEST_FILE_V2" 2>/dev/null || true
 
 # 실패한 테스트가 있으면 종료 코드 1 반환
 if [ $FAILED_TESTS -gt 0 ]; then
-    log_error "일부 API 테스트가 실패했습니다!"
+    log_error "일부 빠른 테스트가 실패했습니다!"
     echo ""
     echo "실패한 테스트 로그:"
     for log_file in "$TEST_RESULTS_DIR"/*.log; do
@@ -229,6 +207,9 @@ if [ $FAILED_TESTS -gt 0 ]; then
     done
     exit 1
 else
-    log_success "모든 API 테스트가 통과했습니다!"
+    log_success "모든 빠른 테스트가 통과했습니다!"
+    echo ""
+    echo "💡 팁: 전체 기능을 테스트하려면 다음 명령어를 실행하세요:"
+    echo "   ./scripts/test-full-workflow.sh"
     exit 0
-fi
+fi 

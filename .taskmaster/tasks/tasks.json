@@ -930,7 +930,7 @@
         "dependencies": [
           13
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": []
       },
       {
@@ -943,7 +943,7 @@
         "dependencies": [
           14
         ],
-        "status": "pending",
+        "status": "in-progress",
         "subtasks": []
       },
       {
@@ -1067,7 +1067,7 @@
     ],
     "metadata": {
       "created": "2025-08-01T01:34:06.334Z",
-      "updated": "2025-08-01T05:12:23.066Z",
+      "updated": "2025-08-01T08:01:29.243Z",
       "description": "Tasks for container-test context"
     }
   }

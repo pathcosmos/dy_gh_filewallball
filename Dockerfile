@@ -58,6 +58,8 @@ ENV PYTHONUNBUFFERED=1 \
 
 # 애플리케이션 코드 복사
 COPY app/ ./app/
+COPY alembic.ini ./
+COPY alembic/ ./alembic/
 
 # 업로드 디렉토리 및 uv 캐시 디렉토리 생성 및 권한 설정
 RUN mkdir -p /app/uploads && \

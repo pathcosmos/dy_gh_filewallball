@@ -5,6 +5,7 @@ Task 10: 감사 로그 및 백그라운드 작업 시스템
 
 import asyncio
 import json
+import os
 import time
 from datetime import datetime
 from enum import Enum
@@ -72,14 +73,31 @@ class AuditLogService:
         for handler in audit_logger.handlers[:]:
             audit_logger.removeHandler(handler)
 
-        # 파일 핸들러 추가 (일별 로테이션, 90일 보관)
-        file_handler = TimedRotatingFileHandler(
-            self.audit_log_file,
-            when="midnight",
-            interval=1,
-            backupCount=90,
-            encoding="utf-8",
-        )
+        try:
+            # 로그 디렉토리 생성
+            self.log_dir.mkdir(exist_ok=True)
+
+            # 파일 핸들러 추가 (일별 로테이션, 90일 보관)
+            file_handler = TimedRotatingFileHandler(
+                str(self.audit_log_file),
+                when="midnight",
+                interval=1,
+                backupCount=90,
+                encoding="utf-8",
+            )
+        except PermissionError:
+            # 권한 문제가 있는 경우 임시 디렉토리 사용
+            import tempfile
+            temp_log_file = os.path.join(tempfile.gettempdir(), "audit.log")
+            logger.warning(f"Using temporary directory for audit logs: {temp_log_file}")
+            
+            file_handler = TimedRotatingFileHandler(
+                temp_log_file,
+                when="midnight",
+                interval=1,
+                backupCount=90,
+                encoding="utf-8",
+            )
 
         # JSON 포맷터 설정
         formatter = logging.Formatter(

@@ -1,0 +1,148 @@
+version: '3.8'
+
+services:
+  # MariaDB Database for Testing
+  mariadb-test:
+    image: mariadb:10.11
+    environment:
+      - MYSQL_ROOT_PASSWORD=test_root_password
+      - MYSQL_DATABASE=filewallball_test_db
+      - MYSQL_USER=filewallball_test_user
+      - MYSQL_PASSWORD=filewallball_test_password
+    ports:
+      - "3307:3306"
+    volumes:
+      - mariadb_test_data:/var/lib/mysql
+      - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - filewallball-test-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p$$MYSQL_ROOT_PASSWORD"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  # Redis Cache for Testing
+  redis-test:
+    image: redis:7-alpine
+    command: redis-server --requirepass filewallball_test_2024
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis_test_data:/data
+    networks:
+      - filewallball-test-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
+  # FileWallBall API Application for Testing
+  filewallball-test-app:
+    build: .
+    ports:
+      - "8002:8000"
+    environment:
+      - ENVIRONMENT=test
+      - DEBUG=true
+      - DB_HOST=mariadb-test
+      - DB_PORT=3306
+      - DB_NAME=filewallball_test_db
+      - DB_USER=filewallball_test_user
+      - DB_PASSWORD=filewallball_test_password
+      - REDIS_HOST=redis-test
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=filewallball_test_2024
+      # 파일 저장소 설정
+      - UPLOAD_DIR=/app/test_uploads
+      - HOST_UPLOAD_DIR=./test_uploads
+      - CONTAINER_UPLOAD_DIR=/app/test_uploads
+      - STORAGE_TYPE=local
+      - LOCAL_STORAGE_PATH=/app/test_uploads
+      - STORAGE_STRUCTURE=date
+      - STORAGE_DATE_FORMAT=%Y/%m/%d
+      - STORAGE_UUID_DEPTH=2
+      - LOG_LEVEL=DEBUG
+    volumes:
+      - ./test_uploads:/app/test_uploads
+      - ./test_logs:/app/logs
+      - ./test_backups:/app/backups
+      - filewallball_test_data:/app/data
+      - filewallball_test_temp:/app/temp
+    depends_on:
+      mariadb-test:
+        condition: service_healthy
+      redis-test:
+        condition: service_healthy
+    networks:
+      - filewallball-test-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 60s
+
+  # Python Tests Container
+  pytest-runner:
+    build:
+      context: .
+      dockerfile: Dockerfile.test.pytest
+    depends_on:
+      filewallball-test-app:
+        condition: service_healthy
+    networks:
+      - filewallball-test-network
+    environment:
+      - API_BASE_URL=http://filewallball-test-app:8000
+      - DB_HOST=mariadb-test
+      - DB_PORT=3306
+      - DB_NAME=filewallball_test_db
+      - DB_USER=filewallball_test_user
+      - DB_PASSWORD=filewallball_test_password
+      - REDIS_HOST=redis-test
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=filewallball_test_2024
+      - ENVIRONMENT=test
+    volumes:
+      - ./test_results:/app/test_results
+      - ./test_uploads:/app/test_uploads
+    profiles:
+      - test
+
+  # API Integration Tests Container
+  api-test-runner:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    depends_on:
+      filewallball-test-app:
+        condition: service_healthy
+    networks:
+      - filewallball-test-network
+    environment:
+      - API_BASE_URL=http://filewallball-test-app:8000
+    volumes:
+      - ./test_results:/app/test_results
+    profiles:
+      - api-test
+
+volumes:
+  mariadb_test_data:
+    driver: local
+  redis_test_data:
+    driver: local
+  filewallball_test_data:
+    driver: local
+  filewallball_test_temp:
+    driver: local
+
+networks:
+  filewallball-test-network:
+    driver: bridge

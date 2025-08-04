@@ -35,19 +35,18 @@ target_metadata = Base.metadata
 
 def get_database_url():
     """환경 변수에서 데이터베이스 URL 가져오기"""
+    # Docker 환경에서는 MariaDB 사용
+    if os.getenv("DB_HOST") and os.getenv("DB_HOST") != "localhost":
+        db_host = os.getenv("DB_HOST", "mariadb")
+        db_port = os.getenv("DB_PORT", "3306")
+        db_name = os.getenv("DB_NAME", "filewallball_db")
+        db_user = os.getenv("DB_USER", "filewallball_user")
+        db_password = os.getenv("DB_PASSWORD", "filewallball_user_password")
+        return f"mysql+pymysql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
+    
     # 로컬 개발 환경에서는 SQLite 사용
-    if os.getenv("ENVIRONMENT", "development") == "development":
-        db_name = os.getenv("DB_NAME", "filewallball.db")
-        return f"sqlite:///./{db_name}"
-
-    # 프로덕션 환경에서는 MariaDB 사용
-    db_host = os.getenv("DB_HOST", "mariadb-service")
-    db_port = os.getenv("DB_PORT", "3306")
-    db_name = os.getenv("DB_NAME", "filewallball_db")
-    db_user = os.getenv("DB_USER", "filewallball_user")
-    db_password = os.getenv("DB_PASSWORD", "filewallball_user_password")
-
-    return f"mysql+pymysql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
+    db_name = os.getenv("DB_NAME", "filewallball.db")
+    return f"sqlite:///./{db_name}"
 
 
 def run_migrations_offline() -> None:

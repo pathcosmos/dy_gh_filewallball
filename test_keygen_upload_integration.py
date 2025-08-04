@@ -9,9 +9,9 @@ from datetime import datetime
 import os
 
 
-# API 기본 URL
-BASE_URL = "http://localhost:8000"
-MASTER_KEY = "dysnt2025FileWallersBallKAuEZzTAsBjXiQ=="
+# API 기본 URL - 환경변수 지원
+BASE_URL = os.getenv("API_BASE_URL", "http://localhost:8000")
+MASTER_KEY = os.getenv("MASTER_KEY", "dysnt2025FileWallersBallKAuEZzTAsBjXiQ==")
 
 
 def test_health_check():

@@ -34,9 +34,17 @@ class ThumbnailService:
 
     def _ensure_thumbnail_dir(self):
         """썸네일 디렉토리 생성"""
-        if not os.path.exists(self.thumbnail_dir):
-            os.makedirs(self.thumbnail_dir, exist_ok=True)
-            logger.info(f"Created thumbnail directory: {self.thumbnail_dir}")
+        try:
+            if not os.path.exists(self.thumbnail_dir):
+                os.makedirs(self.thumbnail_dir, exist_ok=True)
+                logger.info(f"Created thumbnail directory: {self.thumbnail_dir}")
+        except PermissionError:
+            # 권한 문제가 있는 경우 임시 디렉토리 사용
+            import tempfile
+            self.thumbnail_dir = os.path.join(tempfile.gettempdir(), "thumbnails")
+            if not os.path.exists(self.thumbnail_dir):
+                os.makedirs(self.thumbnail_dir, exist_ok=True)
+            logger.warning(f"Using temporary directory for thumbnails: {self.thumbnail_dir}")
 
     def _get_thumbnail_path(self, file_uuid: str, size: str) -> str:
         """썸네일 파일 경로 생성"""

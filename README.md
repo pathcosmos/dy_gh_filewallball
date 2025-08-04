@@ -185,32 +185,30 @@ filewallball  # 콘솔 스크립트로 실행
 
 #### 데이터베이스 설정
 
-##### 옵션 1: SQLite (개발용 권장)
-개발 시 기본적으로 SQLite를 사용합니다. 추가 설정이 필요하지 않습니다.
+##### MariaDB 컨테이너 설정
+프로젝트는 MariaDB 컨테이너를 사용합니다. 로컬 개발 환경에서도 컨테이너를 사용하는 것을 권장합니다.
 
-##### 옵션 2: MySQL/MariaDB
 ```bash
-# 1. MySQL/MariaDB 설치
-# Ubuntu/Debian
-sudo apt install mysql-server
+# Docker Compose로 데이터베이스 시작
+docker-compose up -d mariadb
 
-# macOS
-brew install mysql
+# 또는 Docker로 직접 실행
+docker run -d \
+  --name filewallball-mariadb \
+  -e MYSQL_ROOT_PASSWORD=root_password \
+  -e MYSQL_DATABASE=filewallball_db \
+  -e MYSQL_USER=filewallball_user \
+  -e MYSQL_PASSWORD=filewallball_user_password \
+  -p 3306:3306 \
+  mariadb:10.11
 
-# 2. 데이터베이스 생성
-mysql -u root -p
-CREATE DATABASE filewallball_dev;
-CREATE USER 'filewallball_user'@'localhost' IDENTIFIED BY 'your_password';
-GRANT ALL PRIVILEGES ON filewallball_dev.* TO 'filewallball_user'@'localhost';
-FLUSH PRIVILEGES;
-EXIT;
-
-# 3. 환경 변수 업데이트
-DB_HOST="localhost"
+# 환경 변수 설정 (기본값)
+DB_HOST="mariadb-service"  # 컨테이너 환경
+# DB_HOST="localhost"      # 로컬 개발 시
 DB_PORT=3306
-DB_NAME="filewallball_dev"
+DB_NAME="filewallball_db"
 DB_USER="filewallball_user"
-DB_PASSWORD="your_password"
+DB_PASSWORD="filewallball_user_password"
 ```
 
 #### Redis 설정
@@ -440,53 +438,230 @@ curl -X DELETE "http://localhost:8000/files/{file_id}"
 
 ## 🧪 테스트 및 개발
 
-### 테스트 실행
+### 🚀 빠른 테스트 시작
 
+#### 컨테이너 기반 테스트 (권장)
 ```bash
 # 전체 테스트 실행
-./scripts/dev.sh test
+./scripts/run-container-tests.sh
 
-# 커버리지 포함 테스트
-./scripts/dev.sh test-cov
-
-# 또는 Makefile 사용
-make test
-make test-cov
-
-# 특정 테스트 카테고리 실행
-uv run pytest tests/unit/ -v
-uv run pytest tests/integration/ -v
-uv run pytest tests/e2e/ -v
-
-# 특정 마커로 테스트 실행
-uv run pytest -m "unit"
-uv run pytest -m "integration"
-uv run pytest -m "slow"
+# 특정 테스트 타입만 실행
+./scripts/run-container-tests.sh unit        # Unit 테스트만
+./scripts/run-container-tests.sh integration # Integration 테스트만
+./scripts/run-container-tests.sh api         # API 테스트만
+./scripts/run-container-tests.sh pytest      # 전체 pytest 실행
 ```
 
-### 테스트 데이터베이스
-테스트는 기본적으로 인메모리 SQLite 데이터베이스를 사용합니다. 추가 설정이 필요하지 않습니다.
-
-### 테스트 커버리지
-커버리지 리포트는 `htmlcov/` 디렉토리에 생성됩니다:
+#### 로컬 테스트
 ```bash
-# 브라우저에서 커버리지 리포트 열기
-open htmlcov/index.html  # macOS
-xdg-open htmlcov/index.html  # Linux
-start htmlcov/index.html  # Windows
-```
+# 빠른 테스트 (기본 기능만)
+./scripts/test-quick.sh
 
-### API 테스트 실행
-```bash
-chmod +x scripts/test-api.sh
+# 전체 워크플로우 테스트
+./scripts/test-full-workflow.sh
+
+# API 테스트
 ./scripts/test-api.sh
 ```
 
-### 시스템 모니터링
+### 📋 테스트 종류
+
+#### 1. 컨테이너 기반 테스트 (권장)
+**장점:**
+- 전체 서비스 의존성 포함 (MariaDB, Redis)
+- 격리된 테스트 환경
+- 프로덕션과 유사한 환경
+- 자동 정리 및 결과 수집
+
+#### 2. 로컬 테스트
+- **빠른 테스트**: 기본적인 API 기능만 빠르게 확인 (1-2분)
+- **전체 워크플로우 테스트**: 파일 업로드부터 삭제까지 전체 과정 (3-5분)
+- **API 테스트**: 15개의 API 엔드포인트 테스트 (2-3분)
+
+### 🐍 Python 테스트
+
+#### 로컬 Python 테스트
 ```bash
-chmod +x scripts/monitor.sh
-./scripts/monitor.sh
+# uv 사용 (권장)
+uv run pytest tests/ -v
+uv run pytest tests/unit/ -v
+uv run pytest tests/integration/ -v
+
+# pip 사용
+pip install -r requirements.txt
+pytest tests/ -v
+
+# 커버리지와 함께
+pytest tests/ --cov=app --cov-report=html
 ```
+
+#### 특정 테스트 실행
+```bash
+# 특정 테스트 파일
+pytest tests/unit/test_file_service.py -v
+
+# 특정 테스트 함수
+pytest tests/unit/test_file_service.py::test_upload_file -v
+
+# 마커 사용
+pytest -m "slow" -v
+pytest -m "not slow" -v
+```
+
+### 📊 테스트 결과
+
+#### 결과 파일 위치
+```
+test_results/
+├── htmlcov/                    # HTML 커버리지 리포트
+│   └── index.html
+├── junit.xml                   # JUnit XML 리포트
+├── service_logs.txt            # 서비스 로그
+├── api_test_summary.txt        # API 테스트 요약
+├── workflow_test_summary.txt   # 워크플로우 테스트 요약
+├── quick_test_summary.txt      # 빠른 테스트 요약
+└── *.log                       # 개별 테스트 로그
+```
+
+#### 결과 확인
+```bash
+# HTML 커버리지 리포트 보기
+open test_results/htmlcov/index.html
+
+# 테스트 요약 확인
+cat test_results/api_test_summary.txt
+cat test_results/workflow_test_summary.txt
+cat test_results/quick_test_summary.txt
+
+# 서비스 로그 확인
+tail -f test_results/service_logs.txt
+```
+
+### 🔧 Makefile 사용법
+```bash
+# 테스트 관련 명령어
+make -f Makefile.test help          # 도움말
+make -f Makefile.test build-test    # 테스트 컨테이너 빌드
+make -f Makefile.test run-test      # 전체 테스트 실행
+make -f Makefile.test run-quick-test # 빠른 테스트 실행
+make -f Makefile.test run-full-test # 전체 워크플로우 테스트
+make -f Makefile.test clean-test    # 테스트 정리
+make -f Makefile.test logs-test     # 테스트 로그 확인
+```
+
+### 🚨 문제 해결
+
+#### 일반적인 문제
+1. **API 서비스 연결 실패**
+   ```bash
+   docker-compose -f docker-compose.test.yml ps
+   docker-compose -f docker-compose.test.yml logs filewallball-test-app
+   ```
+
+2. **데이터베이스 연결 실패**
+   ```bash
+   docker-compose -f docker-compose.test.yml logs mariadb-test
+   ```
+
+3. **Redis 연결 실패**
+   ```bash
+   docker-compose -f docker-compose.test.yml logs redis-test
+   ```
+
+#### 테스트 환경 정리
+```bash
+# 완전 정리
+docker-compose -f docker-compose.test.yml down -v --remove-orphans
+docker system prune -f
+rm -rf test_results test_uploads
+
+# 부분 정리
+make -f Makefile.test clean-test
+```
+
+### 📈 성능 테스트
+```bash
+# 성능 테스트 실행
+python scripts/performance_test.py
+
+# Redis 성능 테스트
+python scripts/redis-performance-test.py
+
+# 데이터베이스 성능 테스트
+python scripts/test_database_performance.py
+```
+
+### 🔍 모니터링
+```bash
+# 실시간 로그 확인
+docker-compose -f docker-compose.test.yml logs -f
+
+# 메트릭스 확인
+curl http://localhost:8000/metrics
+
+# 상세 메트릭스
+curl http://localhost:8000/api/v1/metrics/detailed
+```
+
+### 📝 테스트 작성 가이드
+
+#### 새로운 테스트 추가
+1. **Unit 테스트**: `tests/unit/`
+2. **Integration 테스트**: `tests/integration/`
+3. **E2E 테스트**: `tests/e2e/`
+
+#### 테스트 구조
+```python
+import pytest
+from app.services.file_service import FileService
+
+class TestFileService:
+    @pytest.fixture
+    def file_service(self):
+        return FileService()
+    
+    def test_upload_file(self, file_service):
+        # 테스트 로직
+        pass
+    
+    @pytest.mark.integration
+    def test_file_workflow(self, file_service):
+        # 통합 테스트 로직
+        pass
+```
+
+#### 테스트 마커
+```python
+@pytest.mark.slow      # 느린 테스트
+@pytest.mark.integration  # 통합 테스트
+@pytest.mark.api       # API 테스트
+@pytest.mark.unit      # 단위 테스트
+```
+
+### 🎯 CI/CD 통합
+
+#### GitHub Actions 예시
+```yaml
+name: Tests
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Run container tests
+        run: ./scripts/run-container-tests.sh
+      - name: Upload test results
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-results
+          path: test_results/
+```
+
+### 📚 추가 리소스
+- [TEST_README.md](./TEST_README.md) - 상세 테스트 가이드
+- [CLAUDE.md](./CLAUDE.md) - 개발 가이드
+- [docs/testing-framework-guide.md](./docs/testing-framework-guide.md) - 테스트 프레임워크 상세 가이드
 
 ### 코드 품질 도구
 

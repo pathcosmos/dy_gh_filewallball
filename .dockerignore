@@ -59,8 +59,6 @@ backups/
 tests/
 test_*.py
 docs/
-alembic.ini
-alembic/
 k8s/
 scripts/
 uploads/

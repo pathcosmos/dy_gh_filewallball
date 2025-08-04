@@ -27,12 +27,12 @@ class BaseConfig(BaseSettings):
     host: str = "0.0.0.0"
     port: int = 8000
 
-    # Database settings
-    db_host: str = "localhost"
+    # Database settings - MariaDB Container
+    db_host: str = "mariadb-service"
     db_port: int = 3306
-    db_name: str = "filewallball"
-    db_user: str = ""
-    db_password: str = ""
+    db_name: str = "filewallball_db"
+    db_user: str = "filewallball_user"
+    db_password: str = "filewallball_user_password"
     db_pool_size: int = 10
     db_max_overflow: int = 20
 
@@ -109,13 +109,8 @@ class BaseConfig(BaseSettings):
 
     @property
     def database_url(self) -> str:
-        """Generate database URL from settings."""
-        if self.db_user and self.db_password:
-            return f"mysql+pymysql://{self.db_user}:{self.db_password}@{self.db_host}:{self.db_port}/{self.db_name}"
-        elif self.db_user:
-            return f"mysql+pymysql://{self.db_user}@{self.db_host}:{self.db_port}/{self.db_name}"
-        else:
-            return f"sqlite:///{self.db_name}"
+        """Generate MariaDB database URL from settings."""
+        return f"mysql+pymysql://{self.db_user}:{self.db_password}@{self.db_host}:{self.db_port}/{self.db_name}"
 
     @property
     def redis_url(self) -> str:
@@ -136,8 +131,9 @@ class DevelopmentConfig(BaseConfig):
     log_level: str = "DEBUG"
     cors_origins: List[str] = ["*"]
 
-    # Use SQLite for development
-    db_name: str = "filewallball_dev.db"
+    # Development MariaDB
+    db_host: str = "localhost"  # For local development
+    db_name: str = "filewallball_dev"
 
     # Development secret key (change in production)
     secret_key: str = "dev-secret-key-change-in-production"
@@ -152,8 +148,8 @@ class TestingConfig(BaseConfig):
     # Testing-specific settings
     log_level: str = "WARNING"
 
-    # Use in-memory SQLite for testing
-    db_name: str = ":memory:"
+    # Use separate test database
+    db_name: str = "filewallball_test"
 
     # Use separate Redis database for testing
     redis_db: int = 1
