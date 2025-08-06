@@ -32,13 +32,17 @@ class TestBaseConfig:
         assert config.port == 8000
         assert config.debug is False
 
-    def test_database_url_generation_sqlite(self):
-        """Test SQLite database URL generation."""
+    def test_database_url_generation_mariadb(self):
+        """Test MariaDB database URL generation."""
         config = BaseConfig()
-        config.db_name = "test.db"
+        config.db_host = "localhost"
+        config.db_port = 3306
+        config.db_name = "test_db"
+        config.db_user = "test_user"
+        config.db_password = "test_pass"
 
         url = config.database_url
-        assert "sqlite:///test.db" in url
+        assert "mysql+pymysql://test_user:test_pass@localhost:3306/test_db" == url
 
     def test_database_url_generation_mysql(self):
         """Test MySQL database URL generation."""
@@ -110,7 +114,8 @@ class TestDevelopmentConfig:
         config = DevelopmentConfig()
 
         url = config.database_url
-        assert "sqlite:///filewallball_dev.db" in url
+        assert "mysql+pymysql://" in url
+        assert "filewallball_dev" in url
 
 
 class TestTestingConfig:
@@ -133,7 +138,8 @@ class TestTestingConfig:
         config = TestingConfig()
 
         url = config.database_url
-        assert "sqlite:///:memory:" in url
+        assert "mysql+pymysql://" in url
+        assert "test_filewallball" in url
 
 
 class TestProductionConfig:

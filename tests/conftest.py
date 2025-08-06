@@ -15,7 +15,6 @@ import pytest_asyncio
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
 
 from app.core.config import TestingConfig
 from app.main import app
@@ -38,12 +37,14 @@ def test_config() -> TestingConfig:
 
 @pytest.fixture(scope="session")
 def test_db_engine():
-    """Create test database engine."""
-    # Use in-memory SQLite for testing
+    """Create test database engine using MariaDB."""
+    # Use MariaDB test database
+    config = TestingConfig()
     engine = create_engine(
-        "sqlite:///:memory:",
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
+        config.database_url,
+        pool_pre_ping=True,
+        pool_recycle=3600,
+        echo=False,
     )
 
     # Create all tables

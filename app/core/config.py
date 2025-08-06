@@ -27,21 +27,21 @@ class BaseConfig(BaseSettings):
     host: str = "0.0.0.0"
     port: int = 8000
 
-    # Database settings - MariaDB Container
-    db_host: str = "mariadb-service"
-    db_port: int = 3306
-    db_name: str = "filewallball_db"
-    db_user: str = "filewallball_user"
-    db_password: str = "filewallball_user_password"
+    # Database settings - External MariaDB
+    db_host: str = Field(default="pathcosmos.iptime.org", env="DB_HOST")
+    db_port: int = Field(default=33377, env="DB_PORT")
+    db_name: str = Field(default="filewallball", env="DB_NAME")
+    db_user: str = Field(default="filewallball", env="DB_USER")
+    db_password: str = Field(default="jK9#zQ$p&2@f!L7^xY*", env="DB_PASSWORD")
     db_pool_size: int = 10
     db_max_overflow: int = 20
 
-    # Redis settings
-    redis_host: str = "localhost"
-    redis_port: int = 6379
-    redis_password: str = ""
-    redis_db: int = 0
-    redis_pool_size: int = 20
+    # Redis settings - DISABLED
+    # redis_host: str = "localhost"
+    # redis_port: int = 6379
+    # redis_password: str = ""
+    # redis_db: int = 0
+    # redis_pool_size: int = 20
 
     # File storage settings
     upload_dir: str = Field(default="./uploads", env="UPLOAD_DIR")
@@ -110,15 +110,9 @@ class BaseConfig(BaseSettings):
     @property
     def database_url(self) -> str:
         """Generate MariaDB database URL from settings."""
-        return f"mysql+pymysql://{self.db_user}:{self.db_password}@{self.db_host}:{self.db_port}/{self.db_name}"
-
-    @property
-    def redis_url(self) -> str:
-        """Generate Redis URL from settings."""
-        if self.redis_password:
-            return f"redis://:{self.redis_password}@{self.redis_host}:{self.redis_port}/{self.redis_db}"
-        else:
-            return f"redis://{self.redis_host}:{self.redis_port}/{self.redis_db}"
+        from urllib.parse import quote_plus
+        encoded_password = quote_plus(self.db_password)
+        return f"mysql+pymysql://{self.db_user}:{encoded_password}@{self.db_host}:{self.db_port}/{self.db_name}"
 
 
 class DevelopmentConfig(BaseConfig):
@@ -130,10 +124,6 @@ class DevelopmentConfig(BaseConfig):
     # Development-specific settings
     log_level: str = "DEBUG"
     cors_origins: List[str] = ["*"]
-
-    # Development MariaDB
-    db_host: str = "localhost"  # For local development
-    db_name: str = "filewallball_dev"
 
     # Development secret key (change in production)
     secret_key: str = "dev-secret-key-change-in-production"
@@ -147,12 +137,6 @@ class TestingConfig(BaseConfig):
 
     # Testing-specific settings
     log_level: str = "WARNING"
-
-    # Use separate test database
-    db_name: str = "filewallball_test"
-
-    # Use separate Redis database for testing
-    redis_db: int = 1
 
     # Test secret key
     secret_key: str = "test-secret-key"
@@ -171,15 +155,8 @@ class ProductionConfig(BaseConfig):
     log_level: str = "WARNING"
     log_file: str = "/var/log/filewallball/app.log"
 
-    # Production database settings (should be set via environment)
-    db_host: str = Field(..., env="DB_HOST")
-    db_name: str = Field(..., env="DB_NAME")
-    db_user: str = Field(..., env="DB_USER")
-    db_password: str = Field(..., env="DB_PASSWORD")
-
-    # Production Redis settings
-    redis_host: str = Field(..., env="REDIS_HOST")
-    redis_password: str = Field(..., env="REDIS_PASSWORD")
+    # Production database settings (can be overridden by environment)
+    # Uses default values from BaseConfig if not set
 
     # Production secret key (must be set via environment)
     secret_key: str = Field(..., env="SECRET_KEY")

@@ -1,0 +1,46 @@
+# FileWallBall API - Simple Version Dependencies
+
+# Core Framework
+fastapi==0.116.1
+uvicorn==0.35.0
+
+# Database
+sqlalchemy==2.0.42
+alembic==1.16.4
+pymysql==1.1.1
+aiomysql==0.2.0
+
+# Configuration & Validation
+pydantic==2.11.7
+pydantic-settings==2.10.1
+python-dotenv==1.1.1
+
+# File Handling
+python-multipart==0.0.20
+aiofiles==24.1.0
+python-magic==0.4.27
+chardet>=5.2.0
+
+# Image Processing (optional)
+pillow==11.3.0
+
+# Security & Authentication
+python-jose==3.5.0
+passlib==1.7.4
+bcrypt==4.3.0
+pyjwt>=2.10.1
+
+# HTTP Client (for testing)
+httpx>=0.28.1
+requests==2.32.4
+
+# Performance & Async
+uvloop==0.21.0
+watchfiles==1.1.0
+
+# Monitoring (basic)
+prometheus-client==0.22.1
+prometheus-fastapi-instrumentator==7.1.0
+
+# Logging
+structlog==25.4.0

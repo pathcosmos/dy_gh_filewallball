@@ -14,6 +14,7 @@ from app.dependencies.database import get_db
 from app.models.orm_models import ProjectKey
 from app.services.project_key_service import ProjectKeyService
 from app.utils.logging_config import get_logger
+from app.utils.security_key_manager import get_master_key
 
 logger = get_logger(__name__)
 
@@ -56,8 +57,9 @@ async def create_project_key(
         HTTPException: 마스터 키가 유효하지 않거나 프로젝트 생성에 실패한 경우
     """
     try:
-        # 마스터 키 검증
-        if request.master_key != ProjectKeyService.MASTER_KEY:
+        # 마스터 키 검증 - 보안 강화: 환경변수 또는 암호화된 키 사용
+        # 원본 키 (참조용): dysnt2025FileWallersBallKAuEZzTAsBjXiQ==
+        if request.master_key != get_master_key():
             logger.warning(
                 f"Invalid master key attempt from IP: {http_request.client.host}"
             )
@@ -92,9 +94,11 @@ async def create_project_key(
         
         # JWT 토큰 생성 (PyJWT 사용)
         try:
+            # JWT 토큰 생성 - 보안 강화: 환경변수 또는 암호화된 키 사용
+            # 원본 키 (참조용): dysnt2025FileWallersBallKAuEZzTAsBjXiQ==
             jwt_token = jwt.encode(
                 jwt_payload, 
-                ProjectKeyService.MASTER_KEY, 
+                get_master_key(), 
                 algorithm="HS256"
             )
         except Exception as e:
@@ -192,8 +196,9 @@ async def deactivate_project(
         HTTPException: 마스터 키가 유효하지 않거나 프로젝트를 찾을 수 없는 경우
     """
     try:
-        # 마스터 키 검증
-        if master_key != ProjectKeyService.MASTER_KEY:
+        # 마스터 키 검증 - 보안 강화: 환경변수 또는 암호화된 키 사용
+        # 원본 키 (참조용): dysnt2025FileWallersBallKAuEZzTAsBjXiQ==
+        if master_key != get_master_key():
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid master key"

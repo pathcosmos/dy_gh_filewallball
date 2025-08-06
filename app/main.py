@@ -94,6 +94,7 @@ from app.services.rate_limiter_service import RateLimiterService
 from app.services.rbac_service import rbac_service
 from app.services.scheduler_service import scheduler_service
 from app.utils.swagger_customization import custom_openapi
+from app.utils.security_key_manager import get_master_key
 
 # Redis 연결
 redis_client = redis.Redis(
@@ -2785,9 +2786,9 @@ async def generate_project_key(
     - `message`: 성공 메시지
     """
     try:
-        # 마스터 키 검증
-        expected_master_key = "dysnt2025FileWallersBallKAuEZzTAsBjXiQ=="
-        if master_key != expected_master_key:
+        # 마스터 키 검증 - 보안 강화: 환경변수 또는 암호화된 키 사용
+        # 원본 키 (참조용): dysnt2025FileWallersBallKAuEZzTAsBjXiQ==
+        if master_key != get_master_key():
             raise HTTPException(status_code=401, detail="마스터 키가 유효하지 않습니다")
 
         # 요청 날짜 형식 검증

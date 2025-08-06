@@ -29,26 +29,22 @@ def create_async_database_engine() -> AsyncEngine:
     if async_engine is not None:
         return async_engine
 
-    # Convert sync URL to async URL
+    # Convert sync URL to async URL for MariaDB
     database_url = settings.database_url
-    if database_url.startswith("sqlite"):
-        # SQLite async URL
-        async_database_url = database_url.replace("sqlite:///", "sqlite+aiosqlite:///")
-        connect_args = {"check_same_thread": False}
-    elif database_url.startswith("mysql"):
-        # MySQL async URL
+    if database_url.startswith("mysql"):
+        # MySQL/MariaDB async URL
         async_database_url = database_url.replace(
             "mysql+pymysql://", "mysql+aiomysql://"
         )
         connect_args = {}
     elif database_url.startswith("postgresql"):
-        # PostgreSQL async URL
+        # PostgreSQL async URL  
         async_database_url = database_url.replace(
             "postgresql://", "postgresql+asyncpg://"
         )
         connect_args = {}
     else:
-        raise ValueError(f"Unsupported database URL: {database_url}")
+        raise ValueError(f"Unsupported database URL: {database_url}. Only MySQL/MariaDB and PostgreSQL are supported.")
 
     async_engine = create_async_engine(
         async_database_url,

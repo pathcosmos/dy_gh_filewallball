@@ -74,7 +74,10 @@ class IntegrationTestRunner:
 
         # Set environment variables
         os.environ["TESTING"] = "true"
-        os.environ["DATABASE_URL"] = "sqlite:///:memory:"
+        # Use MariaDB test database
+        from app.core.config import TestingConfig
+        config = TestingConfig()
+        os.environ["DATABASE_URL"] = config.database_url
         os.environ["REDIS_URL"] = "redis://localhost:6379/1"
         os.environ["UPLOAD_DIR"] = str(project_root / "uploads")
 

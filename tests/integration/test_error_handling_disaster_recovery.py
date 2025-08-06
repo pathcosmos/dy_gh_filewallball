@@ -152,9 +152,10 @@ class TestErrorHandlingDisasterRecovery:
     async def mock_failing_database(self, test_db_engine):
         """Create a mock database that can simulate failures."""
         # Create a real database engine that we can control
+        from app.core.config import TestingConfig
+        config = TestingConfig()
         engine = create_engine(
-            "sqlite:///:memory:",
-            connect_args={"check_same_thread": False},
+            config.database_url,
             pool_size=1,
             max_overflow=0,
         )

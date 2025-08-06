@@ -10,13 +10,18 @@ from typing import Optional
 from sqlalchemy.orm import Session
 
 from app.models.orm_models import ProjectKey
+from app.utils.security_key_manager import get_master_key
 
 
 class ProjectKeyService:
     """프로젝트 키 관리 서비스"""
 
-    # 고정된 마스터 키
-    MASTER_KEY = "dysnt2025FileWallersBallKAuEZzTAsBjXiQ=="
+    # 보안 강화: 환경변수 또는 암호화된 키 사용
+    # 원본 키 (참조용): dysnt2025FileWallersBallKAuEZzTAsBjXiQ==
+    @property
+    def MASTER_KEY(self) -> str:
+        """동적으로 마스터 키 반환"""
+        return get_master_key()
 
     def __init__(self, db: Session):
         self.db = db

@@ -20,7 +20,6 @@ from fastapi.testclient import TestClient
 from redis.asyncio import Redis
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
 
 from app.core.config import TestingConfig
 from app.database import get_db
@@ -45,7 +44,7 @@ def test_config() -> TestingConfig:
     """Get testing configuration with integration test settings."""
     config = TestingConfig()
     # Override database settings for testing
-    config.db_name = ":memory:"
+    config.db_name = "test_filewallball"
     config.redis_db = 1
     config.upload_dir = "/tmp/filewallball_test_uploads"
     config.max_file_size = 100 * 1024 * 1024  # 100MB for testing
@@ -54,11 +53,12 @@ def test_config() -> TestingConfig:
 
 @pytest.fixture(scope="session")
 def test_db_engine():
-    """Create test database engine with proper isolation."""
+    """Create test database engine with proper isolation using MariaDB."""
+    config = TestingConfig()
     engine = create_engine(
-        "sqlite:///:memory:",
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
+        config.database_url,
+        pool_pre_ping=True,
+        pool_recycle=3600,
         echo=False,  # Set to True for SQL debugging
     )
 

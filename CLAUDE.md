@@ -143,36 +143,37 @@ nano .env  # or your preferred editor
 - **Redis**: Caching with connection pool and failover support
 - **Security**: IP authentication, RBAC, rate limiting, CORS policies
 
-### Project Management (Taskmaster Integration)
-This project uses Taskmaster for structured development workflow:
+### Project Key Management
+This project includes a project key management system for secure API access:
 
 ```bash
-# View current tasks
-task-master list
+# Test project key functionality
+python quick_test_keygen_upload.py
 
-# Get specific task details
-task-master show <task_id>
+# Run integration tests with project keys
+python test_keygen_upload_integration.py
 
-# Update task status
-task-master update <task_id> --status done
-
-# View project progress
-task-master status
+# Test project key upload via curl
+./test_keygen_upload_curl.sh
 ```
 
-The project follows a task-driven development approach with 12+ defined tasks covering infrastructure, database optimization, Redis caching, security, and monitoring.
+The project key system allows for authenticated file uploads and project-based access control.
 
 ## Architecture
 
 ### Core Structure
 - **FastAPI Application**: `app/main.py` - Main application entry point with dual upload APIs
-- **Database Models**: `app/models/` - ORM models, API models, and file models
-- **Services Layer**: `app/services/` - Business logic services (file storage, metadata, caching, rate limiting, RBAC)
-- **Routers**: `app/routers/` - API route handlers for files, health, and IP authentication
-- **Middleware**: `app/middleware/` - Security headers, CORS, audit logging, request ID
+- **API Layer**: `app/api/v1/` - V1 API endpoints (files, projects, health, IP auth)
+- **Database Models**: `app/models/` - ORM models, API models, file models, and Swagger models
+- **Services Layer**: `app/services/` - 20+ business logic services (file storage, metadata, caching, rate limiting, RBAC)
+- **Routers**: `app/routers/` - Legacy API route handlers (being migrated to `app/api/v1/`)
+- **Middleware**: `app/middleware/` - Security headers, CORS, audit logging, request ID, metrics
 - **Dependencies**: `app/dependencies/` - Dependency injection for auth, database, Redis, settings
+- **Repositories**: `app/repositories/` - Data access layer abstraction
+- **Utils**: `app/utils/` - Utility functions for database, security, performance analysis
+- **Validators**: `app/validators/` - File validation logic
 
-### Key Services (17+ Service Modules)
+### Key Services (20+ Service Modules)
 **Core File Services:**
 - **FileStorageService**: Handles file uploads with SHA-256 deduplication and flexible storage backends
 - **MetadataService**: Manages file metadata with database persistence and tagging
@@ -195,6 +196,9 @@ The project follows a task-driven development approach with 12+ defined tasks co
 - **RedisConnectionManager**: Advanced Redis connection pooling with circuit breaker
 - **SchedulerService**: Background task scheduling (file cleanup, maintenance)
 - **StatisticsService**: File usage analytics and reporting
+- **ProjectKeyService**: Project-based authentication and key management
+- **BackgroundTaskService**: Async background processing
+- **HealthCheckService**: System health monitoring
 
 ### Database Design
 - **SQLAlchemy ORM**: Database models in `app/models/orm_models.py`
@@ -253,21 +257,32 @@ STORAGE_STRUCTURE=flat
 - **Monitoring**: Prometheus metrics collection
 
 ### API Endpoints
-- **V1 Upload**: `/upload` - Basic file upload with Redis caching
-- **V2 Upload**: `/api/v1/files/upload` - Enhanced upload with validation, rate limiting, and metadata
+**Legacy Endpoints (app/routers/):**
+- **Upload**: `/upload` - Basic file upload with Redis caching
 - **File Operations**: `/files/{id}`, `/download/{id}`, `/view/{id}`
-- **Security**: `/api/v1/security/headers-test`, `/api/v1/validation/policy`
-- **Monitoring**: `/metrics`, `/health`, `/api/v1/metrics/detailed`
-- **Admin**: `/api/v1/audit/logs`, `/api/v1/rbac/permissions`
+- **Health**: `/health` - Basic health check
+
+**V1 API Endpoints (app/api/v1/):**
+- **Files**: `/api/v1/files/` - Enhanced file operations with validation and metadata
+- **Projects**: `/api/v1/projects/` - Project key management and authentication
+- **Health**: `/api/v1/health/` - Detailed health monitoring
+- **IP Auth**: `/api/v1/ip-auth/` - IP-based authentication management
+
+**System Endpoints:**
+- **Metrics**: `/metrics` - Prometheus metrics endpoint
+- **Documentation**: `/docs` - Swagger UI, `/redoc` - ReDoc documentation
 
 ## Important Implementation Details
 
 ### Core Patterns
-- **Dual Upload APIs**: Basic (`/upload`) for simple use cases, enhanced (`/api/v1/files/upload`) with full validation and metadata
-- **Service-Oriented Architecture**: 17+ specialized services with clear separation of concerns
+- **Dual API Architecture**: Legacy endpoints (`/upload`, `/files/`) and modern V1 API (`/api/v1/`) 
+- **Project-Based Authentication**: Project key system for secure API access with granular permissions
+- **Service-Oriented Architecture**: 20+ specialized services with clear separation of concerns
+- **Repository Pattern**: Data access layer abstraction in `app/repositories/`
 - **Dependency Injection**: Comprehensive DI system in `app/dependencies/` for testability
-- **Middleware Stack**: Security headers, CORS, audit logging, request tracking
+- **Middleware Stack**: Security headers, CORS, audit logging, request tracking, metrics
 - **Background Processing**: AsyncIO tasks for hash calculation, thumbnail generation, cleanup
+- **Async/Await Pattern**: Fully async application with async database and Redis clients
 
 ### Database & Storage
 - **MariaDB Container**: Production-ready MariaDB running in container with Alembic migrations
@@ -292,3 +307,13 @@ STORAGE_STRUCTURE=flat
 - **Environment-Based**: Pydantic settings with comprehensive validation
 - **Container-Aware**: Automatic path mapping for Docker/Kubernetes deployments
 - **Multi-Cloud Ready**: Support for major cloud storage providers out of the box
+- **Configuration Files**: `pyproject.toml` for Python project config, `env.example` for environment template
+- **Development Tools**: Black, isort, flake8, mypy, pytest configurations in `pyproject.toml`
+
+### Development Guidelines
+This codebase includes Cursor rules for consistency:
+
+- **Code Quality**: Follow patterns in `.cursor/rules/cursor_rules.mdc`
+- **Self-Improvement**: Continuous rule improvement based on `.cursor/rules/self_improve.mdc`
+- **Consistent Standards**: Use bullet points, actionable requirements, and clear examples
+- **Rule Maintenance**: Update rules when new patterns emerge, reference actual code examples

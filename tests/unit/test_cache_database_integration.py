@@ -151,8 +151,10 @@ class TestDatabaseTransactionIntegration:
 
     def setup_method(self):
         """Setup test method."""
-        # Create in-memory SQLite database for testing
-        self.engine = create_engine("sqlite:///:memory:", echo=False)
+        # Use MariaDB test database
+        from app.core.config import TestingConfig
+        config = TestingConfig()
+        self.engine = create_engine(config.database_url, echo=False)
         self.SessionLocal = sessionmaker(bind=self.engine)
 
         # Create tables
@@ -250,7 +252,7 @@ class TestDatabaseTransactionIntegration:
             # First update should succeed
             session1.commit()
 
-            # Second update should also succeed (SQLite doesn't have row-level locking)
+            # Second update behavior depends on database locking mechanisms
             session2.commit()
 
             # Verify final state
@@ -375,7 +377,7 @@ class TestDatabaseTransactionIntegration:
 
                 # Don't close immediately to simulate long-running transactions
 
-            # Verify we can still create sessions (SQLite doesn't have connection limits)
+            # Verify we can still create sessions within connection limits
             additional_session = self.SessionLocal()
             result = additional_session.execute(text("SELECT 1"))
             assert result.scalar() == 1
@@ -392,7 +394,9 @@ class TestDataConsistencyValidation:
 
     def setup_method(self):
         """Setup test method."""
-        self.engine = create_engine("sqlite:///:memory:", echo=False)
+        from app.core.config import TestingConfig
+        config = TestingConfig()
+        self.engine = create_engine(config.database_url, echo=False)
         self.SessionLocal = sessionmaker(bind=self.engine)
 
         from app.models.orm_models import Base
@@ -436,7 +440,7 @@ class TestDataConsistencyValidation:
 
             # Adding file with same UUID should raise an error
             session.add(file2)
-            with pytest.raises(Exception):  # SQLite constraint violation
+            with pytest.raises(Exception):  # Database constraint violation
                 session.commit()
 
             session.rollback()
@@ -544,7 +548,9 @@ class TestCacheDatabasePerformance:
         self.cache_service = CacheService()
         self.cache_service.client = AsyncMock()
 
-        self.engine = create_engine("sqlite:///:memory:", echo=False)
+        from app.core.config import TestingConfig
+        config = TestingConfig()
+        self.engine = create_engine(config.database_url, echo=False)
         self.SessionLocal = sessionmaker(bind=self.engine)
 
         from app.models.orm_models import Base
@@ -712,7 +718,7 @@ class TestErrorHandlingAndRecovery:
     def test_database_error_handling(self):
         """Test database error handling."""
         # Test with invalid database connection
-        invalid_engine = create_engine("sqlite:///nonexistent.db", echo=False)
+        invalid_engine = create_engine("mysql+pymysql://invalid:invalid@invalid:3306/invalid", echo=False)
         invalid_session = sessionmaker(bind=invalid_engine)()
 
         try:
@@ -775,7 +781,9 @@ class TestIntegrationScenarios:
         self.cache_service = CacheService()
         self.cache_service.client = AsyncMock()
 
-        self.engine = create_engine("sqlite:///:memory:", echo=False)
+        from app.core.config import TestingConfig
+        config = TestingConfig()
+        self.engine = create_engine(config.database_url, echo=False)
         self.SessionLocal = sessionmaker(bind=self.engine)
 
         from app.models.orm_models import Base

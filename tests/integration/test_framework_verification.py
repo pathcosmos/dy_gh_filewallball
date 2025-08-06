@@ -239,7 +239,7 @@ class TestEnvironmentSetup:
         assert "UPLOAD_DIR" in os.environ
 
         # Check specific values
-        assert "sqlite" in os.environ["DATABASE_URL"]
+        assert "mysql" in os.environ["DATABASE_URL"]
         assert "redis" in os.environ["REDIS_URL"]
         assert "uploads" in os.environ["UPLOAD_DIR"]
 
