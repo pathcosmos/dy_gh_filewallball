@@ -12,7 +12,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from sqlalchemy import asc, desc, func, text
 from sqlalchemy.orm import Session
 
-from app.async_redis_client import get_async_redis_client
+# Redis 클라이언트 제거됨
 from app.database import get_db
 from app.utils.logging_config import get_logger
 

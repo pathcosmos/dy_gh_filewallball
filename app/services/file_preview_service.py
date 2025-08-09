@@ -15,7 +15,7 @@ from fastapi import HTTPException, UploadFile
 from fastapi.responses import Response
 from PIL import Image, ImageOps
 
-from app.async_redis_client import get_async_redis_client
+# Redis 클라이언트 제거됨
 from app.utils.logging_config import get_logger
 
 logger = get_logger(__name__)

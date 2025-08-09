@@ -7,7 +7,7 @@ import hmac
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.orm_models import ProjectKey
 from app.utils.security_key_manager import get_master_key
@@ -23,7 +23,7 @@ class ProjectKeyService:
         """동적으로 마스터 키 반환"""
         return get_master_key()
 
-    def __init__(self, db: Session):
+    def __init__(self, db: AsyncSession):
         self.db = db
 
     def generate_project_key(
@@ -64,7 +64,7 @@ class ProjectKeyService:
 
         return project_key
 
-    def create_project_key(
+    async def create_project_key(
         self, project_name: str, request_date: str, request_ip: str
     ) -> ProjectKey:
         """
@@ -93,12 +93,12 @@ class ProjectKeyService:
         )
 
         self.db.add(db_project_key)
-        self.db.commit()
-        self.db.refresh(db_project_key)
+        await self.db.commit()
+        await self.db.refresh(db_project_key)
 
         return db_project_key
 
-    def validate_project_key(self, project_key: str) -> Optional[ProjectKey]:
+    async def validate_project_key(self, project_key: str) -> Optional[ProjectKey]:
         """
         프로젝트 키 유효성 검증
 
@@ -109,17 +109,17 @@ class ProjectKeyService:
             Optional[ProjectKey]: 유효한 경우 ProjectKey 객체, 그렇지 않으면 None
         """
         # 데이터베이스에서 프로젝트 키 조회
-        db_project_key = (
-            self.db.query(ProjectKey)
-            .filter(
-                ProjectKey.project_key == project_key, ProjectKey.is_active.is_(True)
-            )
-            .first()
+        from sqlalchemy import select
+        stmt = select(ProjectKey).where(
+            ProjectKey.project_key == project_key, 
+            ProjectKey.is_active.is_(True)
         )
+        result = await self.db.execute(stmt)
+        db_project_key = result.scalar_one_or_none()
 
         return db_project_key
 
-    def get_project_by_key(self, project_key: str) -> Optional[ProjectKey]:
+    async def get_project_by_key(self, project_key: str) -> Optional[ProjectKey]:
         """
         프로젝트 키로 프로젝트 정보 조회
 
@@ -129,9 +129,9 @@ class ProjectKeyService:
         Returns:
             Optional[ProjectKey]: 프로젝트 정보
         """
-        return self.validate_project_key(project_key)
+        return await self.validate_project_key(project_key)
 
-    def deactivate_project_key(self, project_key: str) -> bool:
+    async def deactivate_project_key(self, project_key: str) -> bool:
         """
         프로젝트 키 비활성화
 
@@ -141,15 +141,15 @@ class ProjectKeyService:
         Returns:
             bool: 성공 여부
         """
-        db_project_key = self.validate_project_key(project_key)
+        db_project_key = await self.validate_project_key(project_key)
         if db_project_key:
             db_project_key.is_active = False
             db_project_key.updated_at = datetime.utcnow()
-            self.db.commit()
+            await self.db.commit()
             return True
         return False
 
-    def get_project_files(self, project_key: str) -> list:
+    async def get_project_files(self, project_key: str) -> list:
         """
         프로젝트에 속한 파일 목록 조회
 
@@ -159,7 +159,7 @@ class ProjectKeyService:
         Returns:
             list: 파일 목록
         """
-        db_project_key = self.validate_project_key(project_key)
+        db_project_key = await self.validate_project_key(project_key)
         if db_project_key:
             return db_project_key.files
         return []

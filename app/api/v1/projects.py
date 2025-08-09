@@ -8,9 +8,9 @@ from typing import Dict, Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.dependencies.database import get_db
+from app.dependencies.database import get_async_session
 from app.models.orm_models import ProjectKey
 from app.services.project_key_service import ProjectKeyService
 from app.utils.logging_config import get_logger
@@ -37,7 +37,7 @@ class ProjectCreateResponse(BaseModel):
 @router.post("/", response_model=ProjectCreateResponse)
 async def create_project_key(
     request: ProjectCreateRequest,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_session),
     http_request: Request = None,
 ) -> Dict[str, Any]:
     """
@@ -78,7 +78,7 @@ async def create_project_key(
         project_service = ProjectKeyService(db)
         
         # 프로젝트 키 생성 및 저장
-        project_key_obj = project_service.create_project_key(
+        project_key_obj = await project_service.create_project_key(
             project_name=request.project_name,
             request_date=current_date,
             request_ip=client_ip
@@ -130,7 +130,7 @@ async def create_project_key(
 @router.get("/{project_id}")
 async def get_project_info(
     project_id: int,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_session),
 ) -> Dict[str, Any]:
     """
     프로젝트 정보 조회 API
@@ -146,7 +146,10 @@ async def get_project_info(
         HTTPException: 프로젝트를 찾을 수 없는 경우
     """
     try:
-        project = db.query(ProjectKey).filter(ProjectKey.id == project_id).first()
+        from sqlalchemy import select
+        stmt = select(ProjectKey).where(ProjectKey.id == project_id)
+        result = await db.execute(stmt)
+        project = result.scalar_one_or_none()
         
         if not project:
             raise HTTPException(
@@ -160,18 +163,20 @@ async def get_project_info(
             "request_date": project.request_date,
             "request_ip": project.request_ip,
             "is_active": project.is_active,
-            "created_at": project.created_at.isoformat(),
-            "updated_at": project.updated_at.isoformat(),
-            "file_count": len(project.files)
+            "created_at": project.created_at.isoformat() if project.created_at else None,
+            "updated_at": project.updated_at.isoformat() if project.updated_at else None,
+            "file_count": 0  # TODO: 비동기 관계 로딩 구현 필요
         }
         
     except HTTPException:
         raise
     except Exception as e:
+        import traceback
         logger.error(f"Error retrieving project info: {e}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to retrieve project information"
+            detail=f"Failed to retrieve project information: {str(e)}"
         )
 
 
@@ -179,7 +184,7 @@ async def get_project_info(
 async def deactivate_project(
     project_id: int,
     master_key: str,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_session),
 ) -> Dict[str, Any]:
     """
     프로젝트 키 비활성화 API
@@ -204,7 +209,10 @@ async def deactivate_project(
                 detail="Invalid master key"
             )
         
-        project = db.query(ProjectKey).filter(ProjectKey.id == project_id).first()
+        from sqlalchemy import select
+        stmt = select(ProjectKey).where(ProjectKey.id == project_id)
+        result = await db.execute(stmt)
+        project = result.scalar_one_or_none()
         
         if not project:
             raise HTTPException(
@@ -216,7 +224,7 @@ async def deactivate_project(
         project_service = ProjectKeyService(db)
         
         # 프로젝트 키 비활성화
-        success = project_service.deactivate_project_key(project.project_key)
+        success = await project_service.deactivate_project_key(project.project_key)
         
         if success:
             logger.info(f"Project deactivated successfully: {project.project_name} (ID: {project_id})")

@@ -20,17 +20,17 @@ from app.dependencies.database import get_db
 from app.services.project_key_service import ProjectKeyService
 
 # Prometheus 메트릭은 별도 모듈에서 import
-from app.metrics import (
-    active_connections_gauge,
-    cache_hit_counter,
-    cache_miss_counter,
-    error_rate_counter,
-    file_download_counter,
-    file_processing_duration,
-    file_upload_counter,
-    file_upload_duration,
-    file_upload_error_counter,
-)
+# from app.metrics import (
+#     active_connections_gauge,
+#     cache_hit_counter,
+#     cache_miss_counter,
+#     error_rate_counter,
+#     file_download_counter,
+#     file_processing_duration,
+#     file_upload_counter,
+#     file_upload_duration,
+#     file_upload_error_counter,
+# )
 from app.models.orm_models import (
     FileDownload,
     FileInfo,
@@ -39,11 +39,11 @@ from app.models.orm_models import (
     FileView,
     ProjectKey,
 )
-from app.services.cache_service import CacheService
-from app.services.rbac_service import rbac_service
-from app.services.scheduler_service import scheduler_service
-from app.services.statistics_service import statistics_service
-from app.services.thumbnail_service import thumbnail_service
+# from app.services.cache_service import CacheService
+# from app.services.rbac_service import rbac_service
+# from app.services.scheduler_service import scheduler_service
+# from app.services.statistics_service import statistics_service
+# from app.services.thumbnail_service import thumbnail_service
 from app.utils.logging_config import get_logger
 
 logger = get_logger(__name__)

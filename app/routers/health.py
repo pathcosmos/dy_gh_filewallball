@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 
 from app.config import Settings
 from app.dependencies.database import get_db
-from app.dependencies.redis import get_redis_client
+# Redis 클라이언트 제거됨
 from app.dependencies.settings import get_app_settings
 from app.utils.logging_config import get_logger
 
@@ -39,7 +39,6 @@ async def health_check() -> Dict[str, Any]:
 @router.get("/health/detailed")
 async def detailed_health_check(
     db: Session = Depends(get_db),
-    redis_client=Depends(get_redis_client),
     settings: Settings = Depends(get_app_settings),
 ) -> Dict[str, Any]:
     """
@@ -93,23 +92,11 @@ async def detailed_health_check(
             "error": str(e),
         }
 
-    # Redis 연결 확인
-    try:
-        redis_start = time.time()
-        await redis_client.ping()
-        redis_time = time.time() - redis_start
-
-        health_status["checks"]["redis"] = {
-            "status": "healthy",
-            "response_time": round(redis_time * 1000, 2),
-        }
-    except Exception as e:
-        logger.error(f"Redis health check failed: {e}")
-        health_status["checks"]["redis"] = {
-            "status": "unhealthy",
-            "response_time": 0,
-            "error": str(e),
-        }
+    # Redis 연결 확인 (현재 비활성화)
+    health_status["checks"]["redis"] = {
+        "status": "disabled",
+        "response_time": 0,
+    }
 
     # 전체 응답 시간 계산
     total_time = time.time() - start_time
@@ -131,7 +118,7 @@ async def detailed_health_check(
 
 @router.get("/health/ready")
 async def readiness_check(
-    db: Session = Depends(get_db), redis_client=Depends(get_redis_client)
+    db: Session = Depends(get_db)
 ) -> Dict[str, Any]:
     """
     Readiness 체크 (Kubernetes용)
@@ -150,8 +137,8 @@ async def readiness_check(
         if not row or row.test != 1:
             raise HTTPException(status_code=503, detail="Database not ready")
 
-        # Redis 연결 확인
-        await redis_client.ping()
+        # Redis 연결 확인 (현재 비활성화)
+        # await redis_client.ping()
 
         return {"status": "ready", "timestamp": datetime.utcnow().isoformat()}
 

@@ -185,52 +185,16 @@ filewallball  # 콘솔 스크립트로 실행
 
 #### 데이터베이스 설정
 
-##### MariaDB 컨테이너 설정
-프로젝트는 MariaDB 컨테이너를 사용합니다. 로컬 개발 환경에서도 컨테이너를 사용하는 것을 권장합니다.
+##### MariaDB 설정
+프로젝트는 외부 MariaDB 서버를 사용합니다.
 
 ```bash
-# Docker Compose로 데이터베이스 시작
-docker-compose up -d mariadb
-
-# 또는 Docker로 직접 실행
-docker run -d \
-  --name filewallball-mariadb \
-  -e MYSQL_ROOT_PASSWORD=root_password \
-  -e MYSQL_DATABASE=filewallball_db \
-  -e MYSQL_USER=filewallball_user \
-  -e MYSQL_PASSWORD=filewallball_user_password \
-  -p 3306:3306 \
-  mariadb:10.11
-
-# 환경 변수 설정 (기본값)
-DB_HOST="mariadb-service"  # 컨테이너 환경
-# DB_HOST="localhost"      # 로컬 개발 시
-DB_PORT=3306
-DB_NAME="filewallball_db"
-DB_USER="filewallball_user"
-DB_PASSWORD="filewallball_user_password"
-```
-
-#### Redis 설정
-
-##### 옵션 1: 로컬 Redis 설치
-```bash
-# Ubuntu/Debian
-sudo apt install redis-server
-sudo systemctl start redis-server
-
-# macOS
-brew install redis
-brew services start redis
-```
-
-##### 옵션 2: Docker Redis
-```bash
-# Docker로 Redis 시작
-docker run -d --name redis-filewallball -p 6379:6379 redis:7-alpine
-
-# 또는 Makefile 명령어 사용
-make redis-start
+# 환경 변수 설정
+DB_HOST="pathcosmos.iptime.org"  # 외부 서버
+DB_PORT=33377
+DB_NAME="filewallball_dev"  # 또는 filewallball_db
+DB_USER="filewallball"
+DB_PASSWORD="your_password"
 ```
 
 #### 파일 저장소 설정
@@ -277,34 +241,7 @@ STORAGE_UUID_DEPTH=2
 
 자세한 설정 방법은 [파일 저장소 경로 매핑 가이드](docs/file-storage-path-mapping-guide.md)를 참조하세요.
 
-### 🐳 Docker 설치
-
-#### 단일 컨테이너 실행
-```bash
-# 1. Docker 이미지 빌드
-docker build -t filewallball:latest .
-
-# 2. 환경 변수 설정
-cp env.example .env
-# .env 파일 편집
-
-# 3. 컨테이너 실행
-docker run -p 8000:8000 --env-file .env filewallball:latest
-```
-
-#### Docker Compose를 사용한 전체 스택 실행
-```bash
-# 1. 전체 스택 실행 (개발 환경)
-docker-compose up -d
-
-# 2. 로그 확인
-docker-compose logs -f filewallball
-
-# 3. 서비스 중지
-docker-compose down
-```
-
-### ☸️ Kubernetes 배포
+### ☸️ Kubernetes 배포 (선택사항)
 
 #### MicroK8s 환경
 ```bash
