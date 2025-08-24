@@ -36,11 +36,11 @@ docker-compose --env-file .env.dev up -d
 docker-compose --env-file .env.dev ps
 
 # 4. API 테스트
-curl http://localhost:8000/health
-curl http://localhost:8000/files
+curl http://localhost:18000/health
+curl http://localhost:18000/files
 
 # 5. API 문서 확인
-open http://localhost:8000/docs
+open http://localhost:18000/docs
 ```
 
 ### 🔄 환경 전환
@@ -134,6 +134,295 @@ docker-compose --env-file .env.prod logs -f app
 docker-compose --env-file .env.prod down
 ```
 
+### 📋 **상세한 구동 가이드 (단계별)**
+
+#### **🔧 사전 준비사항**
+
+**1. 시스템 요구사항 확인:**
+```bash
+# Docker 및 Docker Compose 버전 확인
+docker --version          # Docker 20.10 이상 필요
+docker-compose --version  # Docker Compose 2.0 이상 필요
+
+# 시스템 리소스 확인
+free -h                   # 최소 4GB RAM 필요
+df -h                     # 최소 2GB 여유 공간 필요
+```
+
+**2. 프로젝트 클론 및 설정:**
+```bash
+# 저장소 클론
+git clone <repository-url>
+cd dy_gh_filewallball
+
+# 환경 변수 파일 확인
+ls -la .env*
+# .env.dev (개발용), .env.prod (프로덕션용), .env (기본)
+```
+
+#### **🚀 개발 환경 구동 (단계별)**
+
+**1단계: 개발 환경 시작**
+```bash
+# 개발 환경으로 서비스 시작
+docker-compose --env-file .env.dev up -d
+
+# 실행 결과 확인
+# [+] Running 2/2
+#  ✔ Container filewallball-mariadb  Healthy
+#  ✔ Container filewallball-app      Started
+```
+
+**2단계: 서비스 상태 확인**
+```bash
+# 전체 서비스 상태 확인
+docker-compose --env-file .env.dev ps
+
+# 예상 출력:
+# NAME                     STATUS              PORTS
+# filewallball-app         Up 10 seconds       0.0.0.0:18000->8000/tcp
+# filewallball-mariadb     Up 15 seconds       0.0.0.0:13306->3306/tcp
+# filewallball-redis-dev   Up 2 hours          0.0.0.0:16379->6379/tcp
+# filewallball-adminer     Up 2 hours          0.0.0.0:18080->8080/tcp
+```
+
+**3단계: 서비스 헬스체크**
+```bash
+# 애플리케이션 헬스체크
+curl http://localhost:18000/health
+
+# 예상 응답:
+# {
+#   "status": "healthy",
+#   "timestamp": "2025-08-24T16:20:00.000000",
+#   "service": "FileWallBall API",
+#   "version": "2.0.0"
+# }
+```
+
+**4단계: 데이터베이스 연결 확인**
+```bash
+# MariaDB 컨테이너 상태 확인
+docker-compose --env-file .env.dev exec mariadb mysqladmin ping -h localhost
+
+# 데이터베이스 접속 테스트
+docker-compose --env-file .env.dev exec mariadb mysql -u filewallball -p -e "SHOW DATABASES;"
+```
+
+**5단계: API 기능 테스트**
+```bash
+# 파일 목록 조회
+curl http://localhost:18000/files
+
+# 파일 업로드 테스트
+echo "Test file content" > test.txt
+curl -X POST -F "file=@test.txt" http://localhost:18000/upload
+
+# API 문서 확인
+open http://localhost:18000/docs  # 또는 브라우저에서 접속
+```
+
+#### **🏭 프로덕션 환경 구동 (단계별)**
+
+**1단계: 프로덕션 환경 시작**
+```bash
+# 프로덕션 환경으로 서비스 시작
+docker-compose --env-file .env.prod up -d
+
+# 실행 결과 확인
+# [+] Running 2/2
+#  ✔ Container filewallball-mariadb  Healthy
+#  ✔ Container filewallball-app      Started
+```
+
+**2단계: 프로덕션 설정 검증**
+```bash
+# 환경 변수 확인
+docker-compose --env-file .env.prod exec app env | grep -E "ENVIRONMENT|DEBUG|LOG_LEVEL"
+
+# 예상 출력:
+# ENVIRONMENT=production
+# DEBUG=false
+# LOG_LEVEL=WARNING
+```
+
+**3단계: 프로덕션 성능 설정 확인**
+```bash
+# 워커 프로세스 확인
+docker-compose --env-file .env.prod exec app ps aux | grep uvicorn
+
+# 리소스 제한 확인
+docker stats --no-stream
+```
+
+**4단계: 프로덕션 보안 설정 확인**
+```bash
+# 포트 노출 상태 확인
+docker-compose --env-file .env.prod ps
+
+# 보안 옵션 확인
+docker-compose --env-file .env.prod config | grep -A 5 "security_opt:"
+```
+
+#### **🔄 환경 전환 방법**
+
+**개발 → 프로덕션 전환:**
+```bash
+# 1. 개발 환경 중지
+docker-compose --env-file .env.dev down
+
+# 2. 프로덕션 환경 시작
+docker-compose --env-file .env.prod up -d
+
+# 3. 전환 확인
+docker-compose --env-file .env.prod ps
+curl http://localhost:18000/health
+```
+
+**프로덕션 → 개발 전환:**
+```bash
+# 1. 프로덕션 환경 중지
+docker-compose --env-file .env.prod down
+
+# 2. 개발 환경 시작
+docker-compose --env-file .env.dev up -d
+
+# 3. 전환 확인
+docker-compose --env-file .env.dev ps
+curl http://localhost:18000/health
+```
+
+#### **📊 모니터링 및 로그 관리**
+
+**실시간 모니터링:**
+```bash
+# 서비스 상태 실시간 모니터링
+docker-compose --env-file .env.prod ps
+
+# 리소스 사용량 모니터링
+docker stats --no-stream
+
+# 네트워크 상태 확인
+docker network ls
+docker network inspect dy_gh_filewallball_app-network
+```
+
+**로그 관리:**
+```bash
+# 전체 서비스 로그 확인
+docker-compose --env-file .env.prod logs -f
+
+# 특정 서비스 로그 확인
+docker-compose --env-file .env.prod logs -f app      # 애플리케이션 로그
+docker-compose --env-file .env.prod logs -f mariadb  # 데이터베이스 로그
+docker-compose --env-file .env.prod logs -f redis    # Redis 로그
+
+# 로그 레벨별 필터링
+docker-compose --env-file .env.prod logs app | grep ERROR
+docker-compose --env-file .env.prod logs app | grep WARNING
+```
+
+#### **🔍 문제 해결 및 디버깅**
+
+**일반적인 문제 해결:**
+```bash
+# 1. 서비스 재시작
+docker-compose --env-file .env.prod restart app
+
+# 2. 특정 서비스만 재시작
+docker-compose --env-file .env.prod restart mariadb
+
+# 3. 컨테이너 내부 접속
+docker-compose --env-file .env.prod exec app bash
+docker-compose --env-file .env.prod exec mariadb mysql -u root -p
+
+# 4. 환경 변수 확인
+docker-compose --env-file .env.prod exec app env | grep -E "ENVIRONMENT|DEBUG|LOG_LEVEL"
+```
+
+**데이터베이스 문제 해결:**
+```bash
+# 데이터베이스 연결 테스트
+docker-compose --env-file .env.prod exec mariadb mysqladmin ping -h localhost
+
+# 데이터베이스 상태 확인
+docker-compose --env-file .env.prod exec mariadb mysql -u root -p -e "SHOW PROCESSLIST;"
+
+# 사용자 권한 확인
+docker-compose --env-file .env.prod exec mariadb mysql -u root -p -e "SHOW GRANTS FOR 'filewallball'@'%';"
+```
+
+**네트워크 문제 해결:**
+```bash
+# 네트워크 상태 확인
+docker network ls
+docker network inspect dy_gh_filewallball_app-network
+
+# 컨테이너 간 통신 테스트
+docker-compose --env-file .env.prod exec app ping mariadb
+docker-compose --env-file .env.prod exec app curl -f http://localhost:18000/health
+```
+
+#### **📁 파일 관리 및 백업**
+
+**파일 업로드/다운로드 테스트:**
+```bash
+# 파일 업로드
+echo "Test content" > test.txt
+curl -X POST -F "file=@test.txt" http://localhost:18000/upload
+
+# 파일 목록 조회
+curl http://localhost:18000/files
+
+# 파일 다운로드
+curl -O http://localhost:18000/download/{file_id}
+
+# 파일 미리보기
+curl http://localhost:18000/view/{file_id}
+```
+
+**백업 및 복구:**
+```bash
+# 데이터베이스 백업
+docker-compose --env-file .env.prod exec mariadb mysqldump -u root -p filewallball_db > backup.sql
+
+# 볼륨 백업
+docker run --rm -v filewallball_uploads_prod_data:/data -v $(pwd):/backup alpine tar czf /backup/uploads_backup.tar.gz -C /data .
+
+# 백업 복구
+docker-compose --env-file .env.prod exec -T mariadb mysql -u root -p filewallball_db < backup.sql
+```
+
+#### **⚙️ 고급 설정 및 최적화**
+
+**성능 최적화:**
+```bash
+# 워커 프로세스 수 조정
+# docker-compose.prod.yml 수정 후
+docker-compose --env-file .env.prod up -d --force-recreate app
+
+# 리소스 제한 조정
+# docker-compose.prod.yml의 deploy 섹션 수정
+```
+
+**캐시 최적화:**
+```bash
+# Redis 캐시 상태 확인
+docker-compose --env-file .env.prod exec redis redis-cli info memory
+
+# 캐시 통계 확인
+docker-compose --env-file .env.prod exec redis redis-cli info stats
+```
+
+**보안 강화:**
+```bash
+# 환경 변수 파일 권한 설정
+chmod 600 .env.prod
+
+# 민감한 정보 확인
+docker-compose --env-file .env.prod exec app env | grep -E "PASSWORD|SECRET|KEY"
+```
+
 #### 2. 환경 전환
 
 ```bash
@@ -165,16 +454,16 @@ docker-compose --env-file .env.prod logs -f redis    # Redis 로그 (선택사�
 
 ```bash
 # 헬스체크 확인
-curl http://localhost:8000/health
+curl http://localhost:18000/health
 
 # API 문서 확인
-curl http://localhost:8000/docs
+curl http://localhost:18000/docs
 
 # 파일 목록 확인
-curl http://localhost:8000/files
+curl http://localhost:18000/files
 
 # 전체 서비스 상태 확인
-docker-compose --env-file .env.prod exec app curl -f http://localhost:8000/health
+docker-compose --env-file .env.prod exec app curl -f http://localhost:18000/health
 ```
 
 #### 5. 문제 해결
@@ -201,14 +490,49 @@ docker-compose --env-file .env.prod exec app env | grep -E "ENVIRONMENT|DEBUG|LO
 - `LOG_LEVEL=DEBUG`
 - `ENVIRONMENT=development`
 - 로컬 Docker 컨테이너 사용
-- `DB_HOST=mariadb`, `DB_PORT=3306`
+- `DB_HOST=mariadb`, `DB_PORT=13306`
+- `DB_NAME=filewallball_db`, `DB_USER=filewallball`
 
 #### 프로덕션 환경 (.env.prod)
 - `DEBUG=false`
 - `LOG_LEVEL=WARNING`
 - `ENVIRONMENT=production`
-- 외부 데이터베이스 사용
-- `DB_HOST=pathcosmos.iptime.org`, `DB_PORT=33377`
+- Docker 컨테이너 사용 (외부 DB 제거됨)
+- `DB_HOST=mariadb`, `DB_PORT=13306`
+- `DB_NAME=filewallball_db`, `DB_USER=filewallball`
+
+#### 기본 환경 (.env)
+- `DEBUG=true`
+- `LOG_LEVEL=INFO`
+- `ENVIRONMENT=testing`
+- Docker 컨테이너 사용
+- `DB_HOST=mariadb`, `DB_PORT=13306`
+- `DB_NAME=filewallball_db`, `DB_USER=filewallball`
+
+### 📁 **환경별 설정 파일 구조**
+
+```
+dy_gh_filewallball/
+├── .env.dev          # 개발 환경 설정
+├── .env.prod         # 프로덕션 환경 설정
+├── .env              # 기본 환경 설정 (기본값)
+├── .env.example      # 환경 변수 템플릿
+├── docker-compose.yml           # 기본 Docker Compose 설정
+├── docker-compose.dev.yml       # 개발 환경 오버라이드
+└── docker-compose.prod.yml      # 프로덕션 환경 오버라이드
+```
+
+### 🔄 **환경별 주요 차이점**
+
+| 설정 항목 | 개발 환경 | 프로덕션 환경 | 기본 환경 |
+|-----------|-----------|---------------|-----------|
+| **DEBUG** | `true` | `false` | `true` |
+| **LOG_LEVEL** | `DEBUG` | `WARNING` | `INFO` |
+| **ENVIRONMENT** | `development` | `production` | `testing` |
+| **핫 리로드** | ✅ 활성화 | ❌ 비활성화 | ❌ 비활성화 |
+| **워커 프로세스** | 1개 | 4개 | 1개 |
+| **리소스 제한** | ❌ 없음 | ✅ 메모리 1GB, CPU 1.0 | ❌ 없음 |
+| **포트 노출** | ✅ 18000, 13306, 16379, 18080 | ✅ 18000, 13306 | ✅ 18000, 13306 |
 
 ### 📊 환경별 성능 설정
 
@@ -222,6 +546,36 @@ docker-compose --env-file .env.prod exec app env | grep -E "ENVIRONMENT|DEBUG|LO
 - 메모리 제한: 1GB
 - CPU 제한: 1.0 코어
 - 자동 재시작 (`restart: always`)
+
+### ✅ **빠른 시작 체크리스트**
+
+#### **🔧 초기 설정 (5분)**
+- [ ] Docker 및 Docker Compose 설치 확인
+- [ ] 프로젝트 클론 완료
+- [ ] 환경 변수 파일 확인 (`.env.dev`, `.env.prod`, `.env`)
+
+#### **🚀 개발 환경 시작 (3분)**
+- [ ] `docker-compose --env-file .env.dev up -d` 실행
+- [ ] 서비스 상태 확인 (`docker-compose --env-file .env.dev ps`)
+- [ ] 헬스체크 통과 (`curl http://localhost:18000/health`)
+- [ ] API 문서 접속 (`http://localhost:18000/docs`)
+
+#### **🏭 프로덕션 환경 시작 (3분)**
+- [ ] `docker-compose --env-file .env.prod up -d` 실행
+- [ ] 프로덕션 설정 검증 (환경 변수, 성능 설정)
+- [ ] 헬스체크 통과 및 성능 확인
+- [ ] 보안 설정 검증
+
+#### **📊 기능 테스트 (5분)**
+- [ ] 파일 업로드 테스트
+- [ ] 파일 목록 조회 테스트
+- [ ] 파일 다운로드 테스트
+- [ ] 파일 미리보기 테스트
+
+#### **🔄 환경 전환 테스트 (2분)**
+- [ ] 개발 → 프로덕션 전환
+- [ ] 프로덕션 → 개발 전환
+- [ ] 데이터 일관성 확인
 
 ---
 
@@ -295,7 +649,7 @@ cp env.example .env
 # .env 파일 편집
 
 # 5. 개발 서버 실행
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+uvicorn app.main:app --host 0.0.0.0 --port 18000 --reload
 ```
 
 ##### 2.3 setup.py를 사용한 설치
@@ -334,19 +688,19 @@ filewallball  # 콘솔 스크립트로 실행
    ENVIRONMENT="development"
 
    # 서버 설정
-   HOST="0.0.0.0"
-   PORT=8000
+HOST="0.0.0.0"
+PORT=18000
 
-   # 데이터베이스 설정 (개발용)
-   DB_HOST="localhost"
-   DB_PORT=3306
+# 데이터베이스 설정 (개발용)
+DB_HOST="localhost"
+DB_PORT=13306
    DB_NAME="filewallball_dev"
    DB_USER=""
    DB_PASSWORD=""
 
    # Redis 설정 (개발용)
-   REDIS_HOST="localhost"
-   REDIS_PORT=6379
+REDIS_HOST="localhost"
+REDIS_PORT=16379
    REDIS_PASSWORD=""
    REDIS_DB=0
 
@@ -367,8 +721,8 @@ filewallball  # 콘솔 스크립트로 실행
 
 ```bash
 # 환경 변수 설정
-DB_HOST="pathcosmos.iptime.org"  # 외부 서버
-DB_PORT=33377
+DB_HOST="localhost"  # 로컬 Docker
+DB_PORT=13306
 DB_NAME="filewallball_dev"  # 또는 filewallball_db
 DB_USER="filewallball"
 DB_PASSWORD="your_password"
@@ -491,7 +845,7 @@ uv sync
 uv sync --dev
 
 # 애플리케이션 실행
-uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+uv run uvicorn app.main:app --host 0.0.0.0 --port 18000 --reload
 
 # 테스트 실행
 uv run pytest tests/ -v
@@ -509,7 +863,7 @@ uv run mypy app/
 
 ### 파일 업로드
 ```bash
-curl -X POST "http://localhost:8000/upload" \
+curl -X POST "http://localhost:18000/upload" \
   -H "Content-Type: multipart/form-data" \
   -F "file=@your_file.txt"
 ```
@@ -519,35 +873,35 @@ curl -X POST "http://localhost:8000/upload" \
 {
   "file_id": "550e8400-e29b-41d4-a716-446655440000",
   "filename": "your_file.txt",
-  "download_url": "http://localhost:8000/download/550e8400-e29b-41d4-a716-446655440000",
-  "view_url": "http://localhost:8000/view/550e8400-e29b-41d4-a716-446655440000",
+  "download_url": "http://localhost:18000/download/550e8400-e29b-41d4-a716-446655440000",
+  "view_url": "http://localhost:18000/view/550e8400-e29b-41d4-a716-446655440000",
   "message": "File uploaded successfully"
 }
 ```
 
 ### 파일 정보 조회
 ```bash
-curl "http://localhost:8000/files/{file_id}"
+curl "http://localhost:18000/files/{file_id}"
 ```
 
 ### 파일 다운로드
 ```bash
-curl "http://localhost:8000/download/{file_id}" -o downloaded_file
+curl "http://localhost:18000/download/{file_id}" -o downloaded_file
 ```
 
 ### 파일 미리보기
 ```bash
-curl "http://localhost:8000/view/{file_id}"
+curl "http://localhost:18000/view/{file_id}"
 ```
 
 ### 파일 목록 조회
 ```bash
-curl "http://localhost:8000/files?limit=10&offset=0"
+curl "http://localhost:18000/files?limit=10&offset=0"
 ```
 
 ### 파일 삭제
 ```bash
-curl -X DELETE "http://localhost:8000/files/{file_id}"
+curl -X DELETE "http://localhost:18000/files/{file_id}"
 ```
 
 ## 🧪 테스트 및 개발
@@ -711,10 +1065,10 @@ python scripts/test_database_performance.py
 docker-compose -f docker-compose.test.yml logs -f
 
 # 메트릭스 확인
-curl http://localhost:8000/metrics
+curl http://localhost:18000/metrics
 
 # 상세 메트릭스
-curl http://localhost:8000/api/v1/metrics/detailed
+curl http://localhost:18000/api/v1/metrics/detailed
 ```
 
 ### 📝 테스트 작성 가이드
@@ -853,12 +1207,12 @@ git push origin feature/your-feature-name
 
 ### 메트릭 확인
 ```bash
-curl "http://localhost:8000/metrics"
+curl "http://localhost:18000/metrics"
 ```
 
 ### 헬스체크
 ```bash
-curl "http://localhost:8000/health"
+curl "http://localhost:18000/health"
 ```
 
 ### HPA 상태 확인
@@ -967,7 +1321,7 @@ docker-compose --env-file .env.prod config | grep -A 10 "deploy:"
 ```bash
 # 프로덕션 환경에서 워커 수 조정
 # docker-compose.prod.yml 수정
-command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "8"]
+command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "18000", "--workers", "8"]
 
 # 설정 적용
 docker-compose --env-file .env.prod up -d --force-recreate app
@@ -1064,16 +1418,16 @@ cat .env | grep DB_
 ```
 
 #### 5. 포트 이미 사용 중
-**문제**: 포트 8000이 이미 사용 중
+**문제**: 포트 18000이 이미 사용 중
 ```bash
-# 포트 8000을 사용하는 프로세스 찾기
-lsof -i :8000
+# 포트 18000을 사용하는 프로세스 찾기
+lsof -i :18000
 
 # 프로세스 종료
 kill -9 <PID>
 
 # 또는 다른 포트 사용
-uv run uvicorn app.main:app --port 8001
+uv run uvicorn app.main:app --port 18001
 ```
 
 #### 6. 권한 문제
@@ -1113,7 +1467,7 @@ kubectl describe pvc filewallball-storage-pvc -n filewallball
 find uploads/ -type f | head -10
 
 # 저장소 통계 확인
-curl -X GET "http://localhost:8000/api/v1/storage/stats" \
+curl -X GET "http://localhost:18000/api/v1/storage/stats" \
   -H "Authorization: Bearer YOUR_TOKEN"
 
 # 설정 재적용
@@ -1372,8 +1726,8 @@ FileWallBall 프로젝트의 모든 문서를 체계적으로 정리한 가이�
 
 ### 프로젝트 리소스
 - [GitHub 저장소](https://github.com/filewallball/api)
-- [API 문서 (Swagger UI)](http://localhost:8000/docs)
-- [API 문서 (ReDoc)](http://localhost:8000/redoc)
+- [API 문서 (Swagger UI)](http://localhost:18000/docs)
+- [API 문서 (ReDoc)](http://localhost:18000/redoc)
 - [프로젝트 위키](https://github.com/filewallball/api/wiki)
 
 ## 📚 추가 리소스

@@ -17,7 +17,7 @@ services:
       - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
       - mariadb_backups:/var/backups
     ports:
-      - "${DB_PORT:-3306}:3306"
+      - "${DB_PORT:-13306}:3306"
     networks:
       - app-network
     security_opt:
@@ -58,7 +58,7 @@ services:
       - logs_data:/app/logs
       - backups_data:/app/backups
     ports:
-      - "${APP_PORT:-8000}:8000"
+      - "${APP_PORT:-18000}:8000"
     depends_on:
       mariadb:
         condition: service_healthy

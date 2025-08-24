@@ -10,7 +10,7 @@ services:
       MYSQL_USER: filewallball_dev_user
       MYSQL_PASSWORD: dev_password
     ports:
-      - "3306:3306"  # Expose for local development
+      - "${DB_PORT:-13306}:3306"  # Expose for local development
     volumes:
       - mariadb_dev_data:/var/lib/mysql
       - ./scripts/init-db-dev.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
@@ -40,7 +40,7 @@ services:
       - DB_USER=filewallball_dev_user
       - DB_PASSWORD=dev_password
     ports:
-      - "8000:8000"  # Expose for local development
+      - "${APP_PORT:-18000}:8000"  # Expose for local development
     volumes:
       - .:/app  # Mount source code for hot reload
       - uploads_dev_data:/app/uploads
@@ -67,7 +67,7 @@ services:
     container_name: filewallball-redis-dev
     restart: unless-stopped
     ports:
-      - "6379:6379"
+      - "${REDIS_PORT:-16379}:6379"
     volumes:
       - redis_dev_data:/data
     networks:
@@ -92,7 +92,7 @@ services:
     container_name: filewallball-adminer
     restart: unless-stopped
     ports:
-      - "8080:8080"
+      - "${ADMINER_PORT:-18080}:8080"
     environment:
       ADMINER_DEFAULT_SERVER: mariadb
     networks:
