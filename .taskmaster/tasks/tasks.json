@@ -1318,11 +1318,115 @@
             "testStrategy": "데이터베이스 백업/복구 스크립트 실행 테스트. 파일 볼륨 백업 및 복원 검증. 로그 로테이션 정책 동작 확인. 백업 스케줄 자동 실행 테스트."
           }
         ]
+      },
+      {
+        "id": 26,
+        "title": "프로젝트 불필요한 소스 및 폴더 정리",
+        "description": "Docker Compose 마이그레이션 완료 후 누적된 불필요한 파일들과 폴더들을 체계적으로 정리하여 프로젝트 구조를 단순화하고 유지보수성을 향상시킵니다.",
+        "details": "1. 테스트 파일 정리: 루트 디렉토리에 흩어진 테스트 스크립트들을 tests/ 폴더로 이동하거나 삭제합니다. 2. 임시 파일 제거: 테스트 결과 파일, 로그 파일, 임시 업로드 파일들을 식별하고 삭제합니다. 3. 레거시 코드 정리: main_legacy.py, main_new.py 등 사용하지 않는 파이썬 파일들을 제거합니다. 4. 중복 설정 파일 통합: requirements.txt, requirements_simple.txt, requirements-dev.txt 등 중복된 의존성 파일들을 Docker 환경에 맞게 정리합니다. 5. 데이터베이스 파일 제거: SQLite DB 파일들을 삭제합니다 (MariaDB로 완전 전환됨). 6. 캐시 폴더 정리: __pycache__, .pytest_cache, .venv 등 개발 환경 캐시 폴더들을 .gitignore에 추가하고 제거합니다. 7. 백업/복구 테스트 데이터 정리: 테스트용 백업 파일들과 복구 데이터를 정리합니다. 8. 문서 중복 제거: 여러 버전의 README 파일, 요약 문서들을 최신 버전으로 통합합니다. 9. .gitignore 업데이트: 정리 과정에서 식별된 불필요한 파일 패턴들을 추가합니다. 10. 디렉토리 구조 최적화: 남은 파일들을 논리적인 폴더 구조로 재배치합니다.",
+        "testStrategy": "1. 정리 전 프로젝트 파일 목록 백업 생성: find . -type f > files_before_cleanup.txt 2. Docker Compose 빌드 테스트: docker-compose build로 정리 후에도 정상 빌드되는지 확인 3. 서비스 실행 테스트: docker-compose up -d로 모든 서비스가 정상 시작되는지 검증 4. API 기능 테스트: 핵심 API 엔드포인트들이 정상 동작하는지 확인 5. Git 저장소 크기 비교: du -sh .git으로 정리 전후 저장소 크기 측정 6. 빌드 시간 측정: 정리 전후 Docker 이미지 빌드 시간 비교 7. 파일 개수 통계: find . -type f | wc -l로 정리 효과 정량화 8. 중요 파일 누락 검증: 핵심 소스 파일, 설정 파일들이 실수로 삭제되지 않았는지 확인",
+        "status": "pending",
+        "dependencies": [
+          25,
+          24
+        ],
+        "priority": "medium",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "프로젝트 파일 현황 분석 및 백업",
+            "description": "정리 작업 전 전체 프로젝트의 파일 구조를 분석하고 백업을 생성하여 안전한 정리 작업을 위한 기반을 마련합니다.",
+            "dependencies": [],
+            "details": "find . -type f > files_before_cleanup.txt 명령으로 모든 파일 목록을 생성합니다. du -sh * 명령으로 각 디렉토리 크기를 측정합니다. git status로 추적되지 않는 파일들을 식별합니다. 중요한 설정 파일들(.env, docker-compose.yml 등)의 백업을 생성합니다. 프로젝트 루트에서 tree 명령으로 디렉토리 구조를 문서화합니다.",
+            "status": "pending",
+            "testStrategy": "백업 파일들이 정상적으로 생성되었는지 확인하고, 파일 목록의 완전성을 검증합니다."
+          },
+          {
+            "id": 2,
+            "title": "테스트 파일 및 임시 파일 정리",
+            "description": "루트 디렉토리에 흩어진 테스트 스크립트들과 임시 파일들을 식별하여 적절히 정리하거나 삭제합니다.",
+            "dependencies": [
+              "26.1"
+            ],
+            "details": "루트 디렉토리의 test_*.py, *_test.py 파일들을 tests/ 폴더로 이동합니다. *.log, *.tmp, temp_* 패턴의 임시 파일들을 삭제합니다. 테스트 결과 파일들(*.xml, *.json 등)을 정리합니다. uploads/ 폴더의 테스트용 파일들을 삭제합니다. pytest 관련 임시 파일들을 제거합니다.",
+            "status": "done",
+            "testStrategy": "tests/ 폴더 구조가 올바르게 생성되었는지 확인하고, 임시 파일들이 완전히 제거되었는지 검증합니다."
+          },
+          {
+            "id": 3,
+            "title": "레거시 코드 및 중복 파일 제거",
+            "description": "사용하지 않는 레거시 Python 파일들과 중복된 설정 파일들을 식별하여 제거합니다.",
+            "dependencies": [
+              "26.1"
+            ],
+            "details": "main_legacy.py, main_new.py, old_*.py 등 레거시 파일들을 삭제합니다. requirements_simple.txt, requirements-dev.txt 등 중복된 의존성 파일들을 정리합니다. 사용하지 않는 설정 파일들(config_old.py, settings_backup.py 등)을 제거합니다. 중복된 유틸리티 함수들이 있는 파일들을 통합합니다. 더 이상 사용하지 않는 API 엔드포인트 파일들을 정리합니다.",
+            "status": "done",
+            "testStrategy": "Docker Compose 빌드가 정상적으로 수행되는지 확인하고, 제거된 파일들이 실제로 사용되지 않았는지 검증합니다."
+          },
+          {
+            "id": 4,
+            "title": "데이터베이스 파일 및 캐시 폴더 정리",
+            "description": "SQLite DB 파일들과 개발 환경 캐시 폴더들을 제거하고 .gitignore를 업데이트합니다.",
+            "dependencies": [
+              "26.2",
+              "26.3"
+            ],
+            "details": "*.db, *.sqlite, *.sqlite3 파일들을 삭제합니다 (MariaDB로 완전 전환됨). __pycache__/ 폴더들을 재귀적으로 삭제합니다. .pytest_cache/, .venv/, node_modules/ 등 개발 캐시 폴더들을 제거합니다. .DS_Store, Thumbs.db 등 시스템 생성 파일들을 삭제합니다. .gitignore 파일에 캐시 폴더 패턴들을 추가합니다.",
+            "status": "done",
+            "testStrategy": "캐시 폴더들이 완전히 제거되었는지 확인하고, .gitignore 설정이 올바르게 적용되는지 테스트합니다."
+          },
+          {
+            "id": 5,
+            "title": "백업 및 복구 테스트 데이터 정리",
+            "description": "테스트용 백업 파일들과 복구 데이터를 식별하여 정리하고 필요한 것들만 보존합니다.",
+            "dependencies": [
+              "26.2"
+            ],
+            "details": "backups/ 폴더의 테스트용 백업 파일들을 정리합니다. backup_test_*, test_backup_* 패턴의 파일들을 삭제합니다. 복구 테스트용 더미 데이터 파일들을 제거합니다. 실제 운영에 필요한 백업 스크립트들은 scripts/ 폴더로 이동합니다. 백업 관련 로그 파일들을 정리합니다.",
+            "status": "done",
+            "testStrategy": "필요한 백업 스크립트들이 올바른 위치에 있는지 확인하고, 테스트 데이터가 완전히 제거되었는지 검증합니다."
+          },
+          {
+            "id": 6,
+            "title": "문서 파일 통합 및 중복 제거",
+            "description": "여러 버전의 README 파일들과 문서들을 최신 버전으로 통합하고 중복을 제거합니다.",
+            "dependencies": [
+              "26.3"
+            ],
+            "details": "README_old.md, README_backup.md 등 중복된 README 파일들을 제거합니다. 여러 버전의 API 문서들을 최신 버전으로 통합합니다. 프로젝트 요약 문서들의 중복을 제거하고 하나로 통합합니다. 설치 가이드, 사용법 문서들을 정리하여 docs/ 폴더로 구조화합니다. 더 이상 유효하지 않은 문서들을 삭제합니다.",
+            "status": "done",
+            "testStrategy": "통합된 문서들의 내용이 최신 상태인지 확인하고, 문서 구조가 논리적으로 구성되었는지 검증합니다."
+          },
+          {
+            "id": 7,
+            "title": ".gitignore 업데이트 및 Git 저장소 최적화",
+            "description": "정리 과정에서 식별된 불필요한 파일 패턴들을 .gitignore에 추가하고 Git 저장소를 최적화합니다.",
+            "dependencies": [
+              "26.4",
+              "26.5"
+            ],
+            "details": ".gitignore에 캐시 폴더, 임시 파일, 로그 파일 패턴들을 추가합니다. Git에서 추적 중인 불필요한 파일들을 제거합니다 (git rm --cached). .env.example 파일을 생성하여 환경 변수 템플릿을 제공합니다. git gc 명령으로 저장소를 최적화합니다. 커밋 히스토리에서 큰 파일들을 정리합니다.",
+            "status": "in-progress",
+            "testStrategy": "git status로 추적되지 않아야 할 파일들이 올바르게 무시되는지 확인하고, 저장소 크기가 감소했는지 측정합니다."
+          },
+          {
+            "id": 8,
+            "title": "디렉토리 구조 최적화 및 최종 검증",
+            "description": "남은 파일들을 논리적인 폴더 구조로 재배치하고 전체 정리 작업을 검증합니다.",
+            "dependencies": [
+              "26.6",
+              "26.7"
+            ],
+            "details": "스크립트 파일들을 scripts/ 폴더로 이동합니다. 설정 파일들을 config/ 폴더로 구조화합니다. 유틸리티 함수들을 utils/ 폴더로 정리합니다. 정적 파일들을 static/ 폴더로 이동합니다. Docker Compose 빌드 및 실행 테스트를 수행합니다. API 기능 테스트로 모든 엔드포인트가 정상 동작하는지 확인합니다. 정리 전후 프로젝트 크기와 파일 수를 비교합니다.",
+            "status": "pending",
+            "testStrategy": "docker-compose up -d로 전체 스택이 정상 시작되는지 확인하고, 핵심 API 기능들이 모두 동작하는지 테스트합니다. 프로젝트 구조가 논리적이고 유지보수하기 쉬운 형태로 구성되었는지 검증합니다."
+          }
+        ]
       }
     ],
     "metadata": {
       "created": "2025-08-01T01:34:06.334Z",
-      "updated": "2025-08-24T13:59:19.627Z",
+      "updated": "2025-08-24T14:49:52.683Z",
       "description": "Tasks for container-test context"
     }
   }

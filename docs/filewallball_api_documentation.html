@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FileWallBall API Documentation - Simplified</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+        
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        .subtitle {
+            font-size: 1.2em;
+            opacity: 0.95;
+        }
+        
+        .version-info {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            text-align: left;
+        }
+        
+        .version-info h3 {
+            margin-bottom: 10px;
+        }
+        
+        nav {
+            background: #f8f9fa;
+            padding: 20px 40px;
+            border-bottom: 2px solid #e9ecef;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        nav ul {
+            list-style: none;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: center;
+        }
+        
+        nav a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+            padding: 8px 16px;
+            border-radius: 8px;
+            transition: all 0.3s;
+        }
+        
+        nav a:hover {
+            background: #667eea;
+            color: white;
+            transform: translateY(-2px);
+        }
+        
+        .content {
+            padding: 40px;
+        }
+        
+        section {
+            margin-bottom: 60px;
+        }
+        
+        h2 {
+            color: #667eea;
+            font-size: 2em;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #667eea;
+        }
+        
+        h3 {
+            color: #764ba2;
+            font-size: 1.5em;
+            margin-bottom: 15px;
+            margin-top: 30px;
+        }
+        
+        .endpoint-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .endpoint-table th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 10px;
+            text-align: left;
+            font-weight: 600;
+        }
+        
+        .endpoint-table td {
+            padding: 12px 10px;
+            border-bottom: 1px solid #eee;
+            vertical-align: top;
+        }
+        
+        .endpoint-table tr:hover {
+            background: #f8f9fa;
+        }
+        
+        .method {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 0.8em;
+            text-transform: uppercase;
+        }
+        
+        .method.get { background: #28a745; color: white; }
+        .method.post { background: #007bff; color: white; }
+        .method.put { background: #ffc107; color: #212529; }
+        .method.delete { background: #dc3545; color: white; }
+        
+        .path {
+            font-family: 'Courier New', monospace;
+            background: #f1f3f4;
+            padding: 4px 8px;
+            border-radius: 4px;
+            color: #1565c0;
+            font-weight: bold;
+        }
+        
+        .params {
+            font-size: 0.9em;
+            line-height: 1.4;
+        }
+        
+        .param-name {
+            color: #1976d2;
+            font-weight: bold;
+        }
+        
+        .param-type {
+            color: #388e3c;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .badge {
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 0.7em;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        
+        .badge.optional {
+            background: #ffc107;
+            color: #212529;
+        }
+        
+        .badge.required {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .code-block {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 15px 0;
+            font-family: 'Courier New', monospace;
+            overflow-x: auto;
+        }
+        
+        .response-example {
+            background: #e8f5e8;
+            border-left: 4px solid #28a745;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 0 8px 8px 0;
+        }
+        
+        .warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        
+        .info {
+            background: #d1ecf1;
+            border: 1px solid #b7d4ea;
+            color: #0c5460;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        
+        .success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        
+        footer {
+            background: #f8f9fa;
+            text-align: center;
+            padding: 30px;
+            color: #6c757d;
+            border-top: 1px solid #dee2e6;
+        }
+
+        .feature-highlight {
+            background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .feature-highlight h4 {
+            color: #1565c0;
+            margin-bottom: 10px;
+        }
+
+        ul {
+            margin: 15px 0 15px 20px;
+        }
+
+        li {
+            margin: 5px 0;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                margin: 10px;
+            }
+            
+            .content {
+                padding: 20px;
+            }
+            
+            nav ul {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .endpoint-table {
+                font-size: 0.9em;
+            }
+            
+            .endpoint-table th,
+            .endpoint-table td {
+                padding: 8px 5px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📂 FileWallBall API</h1>
+            <p class="subtitle">Simple & Fast File Management API</p>
+            
+            <div class="version-info">
+                <h3>✨ Simplified Version (v2.0)</h3>
+                <p>• V1 복잡한 엔드포인트 제거</p>
+                <p>• 간단하고 직관적인 7개 핵심 엔드포인트</p>
+                <p>• 인증 없는 빠른 파일 업로드/다운로드</p>
+                <p>• 100MB 파일 크기 제한</p>
+            </div>
+        </header>
+
+        <nav>
+            <ul>
+                <li><a href="#overview">개요</a></li>
+                <li><a href="#endpoints">엔드포인트</a></li>
+                <li><a href="#examples">예제</a></li>
+                <li><a href="#responses">응답 형식</a></li>
+            </ul>
+        </nav>
+
+        <div class="content">
+            <section id="overview">
+                <h2>🎯 API 개요</h2>
+                
+                <div class="info">
+                    <h4>📝 FileWallBall Simplified API</h4>
+                    <p>복잡한 인증과 기능들을 제거하고 핵심 파일 관리 기능만 제공하는 간소화된 API입니다.</p>
+                </div>
+
+                <div class="feature-highlight">
+                    <h4>🚀 주요 개선사항</h4>
+                    <ul>
+                        <li><strong>단순화:</strong> 20+ 엔드포인트 → 7개 핵심 엔드포인트</li>
+                        <li><strong>인증 제거:</strong> 프로젝트 키, Bearer 토큰 불필요</li>
+                        <li><strong>직관적 URL:</strong> <code>/api/v1/files/</code> → <code>/files/</code>, <code>/upload</code></li>
+                        <li><strong>빠른 처리:</strong> 복잡한 서비스 레이어 제거</li>
+                        <li><strong>안정성:</strong> 기본적인 파일 검증과 해시 계산</li>
+                    </ul>
+                </div>
+
+                <h3>🔧 기술 스택</h3>
+                <ul>
+                    <li><strong>Framework:</strong> FastAPI + SQLAlchemy</li>
+                    <li><strong>Database:</strong> MariaDB (또는 SQLite)</li>
+                    <li><strong>Storage:</strong> 로컬 파일시스템 (/app/uploads)</li>
+                    <li><strong>Security:</strong> 기본 파일 크기/타입 검증</li>
+                    <li><strong>Performance:</strong> 스트리밍 업로드/다운로드</li>
+                </ul>
+
+                <h3>📋 지원 기능</h3>
+                <ul>
+                    <li>파일 업로드 (최대 100MB)</li>
+                    <li>파일 다운로드 (스트리밍)</li>
+                    <li>파일 정보 조회</li>
+                    <li>파일 목록 (페이지네이션)</li>
+                    <li>텍스트 파일 미리보기</li>
+                    <li>파일 삭제</li>
+                    <li>SHA-256 해시 기반 무결성 검증</li>
+                </ul>
+            </section>
+
+            <section id="endpoints">
+                <h2>🛠️ API 엔드포인트</h2>
+                
+                <div class="success">
+                    <h4>🎉 모든 엔드포인트는 인증 없이 사용 가능</h4>
+                    <p>간편하고 빠른 파일 관리를 위해 인증 과정을 제거했습니다.</p>
+                </div>
+
+                <table class="endpoint-table">
+                    <thead>
+                        <tr>
+                            <th>기능</th>
+                            <th>메서드</th>
+                            <th>경로</th>
+                            <th>파라미터</th>
+                            <th>설명</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Health Check</td>
+                            <td><span class="method get">GET</span></td>
+                            <td><span class="path">/health</span></td>
+                            <td class="params">-</td>
+                            <td>API 상태 확인</td>
+                        </tr>
+                        <tr>
+                            <td>파일 업로드</td>
+                            <td><span class="method post">POST</span></td>
+                            <td><span class="path">/upload</span></td>
+                            <td class="params">
+                                <span class="param-name">file</span> <span class="param-type">UploadFile</span> <span class="badge required">필수</span>
+                                <br><small>form-data로 전송</small>
+                            </td>
+                            <td>파일 업로드 (최대 100MB)</td>
+                        </tr>
+                        <tr>
+                            <td>파일 정보</td>
+                            <td><span class="method get">GET</span></td>
+                            <td><span class="path">/files/{file_id}</span></td>
+                            <td class="params">
+                                <span class="param-name">file_id</span> <span class="param-type">string (UUID)</span> <span class="badge required">필수</span>
+                            </td>
+                            <td>파일 메타데이터 조회</td>
+                        </tr>
+                        <tr>
+                            <td>파일 다운로드</td>
+                            <td><span class="method get">GET</span></td>
+                            <td><span class="path">/download/{file_id}</span></td>
+                            <td class="params">
+                                <span class="param-name">file_id</span> <span class="param-type">string (UUID)</span> <span class="badge required">필수</span>
+                            </td>
+                            <td>파일 다운로드 (스트리밍)</td>
+                        </tr>
+                        <tr>
+                            <td>파일 미리보기</td>
+                            <td><span class="method get">GET</span></td>
+                            <td><span class="path">/view/{file_id}</span></td>
+                            <td class="params">
+                                <span class="param-name">file_id</span> <span class="param-type">string (UUID)</span> <span class="badge required">필수</span>
+                            </td>
+                            <td>텍스트 파일 내용 미리보기 (1000자)</td>
+                        </tr>
+                        <tr>
+                            <td>파일 목록</td>
+                            <td><span class="method get">GET</span></td>
+                            <td><span class="path">/files</span></td>
+                            <td class="params">
+                                <span class="param-name">limit</span> <span class="param-type">int = 10</span> <span class="badge optional">선택</span><br>
+                                <span class="param-name">offset</span> <span class="param-type">int = 0</span> <span class="badge optional">선택</span>
+                            </td>
+                            <td>파일 목록 조회 (페이지네이션)</td>
+                        </tr>
+                        <tr>
+                            <td>파일 삭제</td>
+                            <td><span class="method delete">DELETE</span></td>
+                            <td><span class="path">/files/{file_id}</span></td>
+                            <td class="params">
+                                <span class="param-name">file_id</span> <span class="param-type">string (UUID)</span> <span class="badge required">필수</span>
+                            </td>
+                            <td>파일 완전 삭제 (파일시스템 + DB)</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <section id="examples">
+                <h2>💻 사용 예제</h2>
+
+                <h3>1. 파일 업로드</h3>
+                <div class="code-block">
+# cURL 예제
+curl -X POST http://localhost:8000/upload \
+     -F "file=@example.txt"
+
+# Python requests 예제
+import requests
+
+with open('example.txt', 'rb') as f:
+    response = requests.post('http://localhost:8000/upload', 
+                           files={'file': f})
+print(response.json())
+                </div>
+                
+                <div class="response-example">
+                    <strong>응답:</strong>
+                    <div class="code-block">
+{
+    "file_id": "123e4567-e89b-12d3-a456-426614174000",
+    "filename": "example.txt",
+    "file_size": 1024,
+    "upload_time": "2024-01-15T10:30:00",
+    "download_url": "/download/123e4567-e89b-12d3-a456-426614174000",
+    "view_url": "/view/123e4567-e89b-12d3-a456-426614174000",
+    "message": "File uploaded successfully"
+}
+                    </div>
+                </div>
+
+                <h3>2. 파일 정보 조회</h3>
+                <div class="code-block">
+# cURL 예제
+curl http://localhost:8000/files/123e4567-e89b-12d3-a456-426614174000
+
+# Python requests 예제
+response = requests.get('http://localhost:8000/files/123e4567-e89b-12d3-a456-426614174000')
+print(response.json())
+                </div>
+
+                <div class="response-example">
+                    <strong>응답:</strong>
+                    <div class="code-block">
+{
+    "file_id": "123e4567-e89b-12d3-a456-426614174000",
+    "filename": "example.txt",
+    "file_size": 1024,
+    "mime_type": "text/plain",
+    "upload_time": "2024-01-15T10:30:00",
+    "file_hash": "a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3"
+}
+                    </div>
+                </div>
+
+                <h3>3. 파일 목록 조회</h3>
+                <div class="code-block">
+# 기본 목록 (10개)
+curl http://localhost:8000/files
+
+# 페이지네이션
+curl "http://localhost:8000/files?limit=20&offset=10"
+                </div>
+
+                <h3>4. 파일 다운로드</h3>
+                <div class="code-block">
+# 브라우저에서 직접 접근
+http://localhost:8000/download/123e4567-e89b-12d3-a456-426614174000
+
+# cURL로 다운로드
+curl -O -J http://localhost:8000/download/123e4567-e89b-12d3-a456-426614174000
+                </div>
+
+                <h3>5. 텍스트 파일 미리보기</h3>
+                <div class="code-block">
+curl http://localhost:8000/view/123e4567-e89b-12d3-a456-426614174000
+                </div>
+
+                <div class="response-example">
+                    <strong>응답 (텍스트 파일인 경우):</strong>
+                    <div class="code-block">
+{
+    "file_id": "123e4567-e89b-12d3-a456-426614174000",
+    "filename": "example.txt",
+    "content": "This is the content of the file...",
+    "truncated": false
+}
+                    </div>
+                </div>
+
+                <h3>6. 파일 삭제</h3>
+                <div class="code-block">
+curl -X DELETE http://localhost:8000/files/123e4567-e89b-12d3-a456-426614174000
+                </div>
+            </section>
+
+            <section id="responses">
+                <h2>📋 응답 형식 및 상태 코드</h2>
+
+                <h3>HTTP 상태 코드</h3>
+                <table class="endpoint-table">
+                    <thead>
+                        <tr>
+                            <th>상태 코드</th>
+                            <th>설명</th>
+                            <th>발생 상황</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><span class="method get">200</span></td>
+                            <td>성공</td>
+                            <td>요청이 성공적으로 처리됨</td>
+                        </tr>
+                        <tr>
+                            <td><span class="method post">201</span></td>
+                            <td>생성됨</td>
+                            <td>파일 업로드 성공</td>
+                        </tr>
+                        <tr>
+                            <td><span class="method put">400</span></td>
+                            <td>잘못된 요청</td>
+                            <td>파일 없음, 잘못된 파라미터</td>
+                        </tr>
+                        <tr>
+                            <td><span class="method get">404</span></td>
+                            <td>찾을 수 없음</td>
+                            <td>파일이 존재하지 않음</td>
+                        </tr>
+                        <tr>
+                            <td><span class="method put">413</span></td>
+                            <td>파일 크기 초과</td>
+                            <td>100MB 제한 초과</td>
+                        </tr>
+                        <tr>
+                            <td><span class="method delete">500</span></td>
+                            <td>서버 오류</td>
+                            <td>내부 서버 오류</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3>에러 응답 형식</h3>
+                <div class="code-block">
+{
+    "detail": "Error message here"
+}
+                </div>
+
+                <div class="warning">
+                    <h4>⚠️ 파일 크기 제한</h4>
+                    <p>업로드 파일 크기는 최대 <strong>100MB</strong>로 제한됩니다.</p>
+                </div>
+
+                <div class="info">
+                    <h4>🔒 보안 고려사항</h4>
+                    <ul>
+                        <li>파일 확장자 기반 기본 검증</li>
+                        <li>SHA-256 해시를 통한 파일 무결성 확인</li>
+                        <li>스트리밍을 통한 메모리 효율적 처리</li>
+                        <li>UUID 기반 파일 식별로 예측 불가능한 URL</li>
+                    </ul>
+                </div>
+            </section>
+        </div>
+
+        <footer>
+            <p>&copy; 2024 FileWallBall API - Simplified Version</p>
+            <p>✨ V1 복잡한 기능들을 제거하고 핵심 파일 관리 기능만 제공 ✨</p>
+            <p>마지막 업데이트: 2025-08-10</p>
+        </footer>
+    </div>
+</body>
+</html>
