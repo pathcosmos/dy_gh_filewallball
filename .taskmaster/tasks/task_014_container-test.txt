@@ -1,0 +1,11 @@
+# Task ID: 14
+# Title: 프로젝트 키 생성 API 구현 및 테스트
+# Status: done
+# Dependencies: 13
+# Priority: high
+# Description: 마스터 키를 사용하여 프로젝트별 API 키를 생성하는 기능을 구현합니다.
+# Details:
+POST /api/v1/projects 엔드포인트 구현. 요청 본문: {"project_name": "string", "master_key": "string"}. JWT 토큰 기반 프로젝트 키 생성 (PyJWT 2.8+). 프로젝트명과 생성일시를 payload에 포함. 데이터베이스에 프로젝트 정보 저장. 응답: {"project_key": "string", "project_id": "uuid"}.
+
+# Test Strategy:
+curl -X POST -H 'Content-Type: application/json' -d '{"project_name":"test","master_key":"master123"}' http://localhost:8000/api/v1/projects로 키 생성 테스트. JWT 토큰 디코딩으로 payload 검증.

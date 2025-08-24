@@ -42,7 +42,7 @@ services:
     environment:
       - DB_HOST=mariadb
       - DB_PORT=3306
-      - DB_NAME=${DB_NAME:-filewallball_db}
+      - DB_NAME=filewallball_db
       - DB_USER=${DB_USER:-filewallball_user}
       - DB_PASSWORD=${DB_PASSWORD:-filewallball_user_password}
       - UPLOAD_DIR=/app/uploads
@@ -57,7 +57,6 @@ services:
       - uploads_data:/app/uploads
       - logs_data:/app/logs
       - backups_data:/app/backups
-      - ${HOST_UPLOAD_DIR:-./uploads}:${CONTAINER_UPLOAD_DIR:-/app/uploads}
     ports:
       - "${APP_PORT:-8000}:8000"
     depends_on:

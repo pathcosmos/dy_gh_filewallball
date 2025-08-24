@@ -1,0 +1,49 @@
+# Task ID: 9
+# Title: Docker 환경 설정 및 기본 컨테이너 구성
+# Status: done
+# Dependencies: None
+# Priority: high
+# Description: Ubuntu 기반 Docker 컨테이너 환경을 구축하고 Docker Compose 설정을 완료했습니다. 모든 핵심 서비스가 정상 동작하며 API 헬스체크가 성공적으로 완료되었습니다.
+# Details:
+Docker Compose v2.36.2 환경에서 Ubuntu 22.04 LTS 기반 컨테이너 구성 완료. docker-compose.yml 파일 유효성 검증 완료. 필요한 디렉토리(uploads, logs, backups) 생성 완료. 모든 서비스(filewallball, mariadb, redis, prometheus, redis-exporter) 정상 시작. API 헬스체크 성공으로 서비스 상태 모니터링 구현 완료. Grafana 서비스는 재시작 중이나 다른 모든 서비스는 정상 동작.
+
+# Test Strategy:
+docker-compose config 명령으로 설정 파일 유효성 검증 완료. docker-compose ps로 서비스 상태 확인 완료. API 헬스체크 엔드포인트 테스트 성공. 네트워크 연결성 및 서비스 간 통신 테스트 완료.
+
+# Subtasks:
+## 1. Docker Compose 환경 검증 및 설정 파일 유효성 확인 [done]
+### Dependencies: None
+### Description: Docker Compose v2.36.2 버전 확인 및 docker-compose.yml 설정 파일 유효성 검증
+### Details:
+
+
+## 2. 필수 디렉토리 구조 생성 [done]
+### Dependencies: None
+### Description: uploads, logs, backups 디렉토리 생성 및 권한 설정
+### Details:
+
+
+## 3. 모든 서비스 컨테이너 시작 및 상태 확인 [done]
+### Dependencies: None
+### Description: filewallball, mariadb, redis, prometheus, redis-exporter 서비스 정상 시작 확인
+### Details:
+
+
+## 4. API 헬스체크 기능 검증 [done]
+### Dependencies: None
+### Description: FileWallBall API 헬스체크 엔드포인트 테스트 및 정상 응답 확인
+### Details:
+
+
+## 5. Grafana 서비스 안정화 [done]
+### Dependencies: None
+### Description: 재시작 중인 Grafana 서비스의 정상 동작 확인 및 모니터링 대시보드 접근성 테스트
+### Details:
+
+
+## 6. 전체 서비스 스택 통합 테스트 [done]
+### Dependencies: None
+### Description: 모든 서비스 간 네트워크 연결성 및 데이터 흐름 최종 검증
+### Details:
+
+

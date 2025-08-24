@@ -28,8 +28,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY . .
 
-# Create necessary directories
-RUN mkdir -p /app/uploads /app/logs /app/backups
+# Create necessary directories with proper permissions
+RUN mkdir -p /app/uploads /app/logs /app/backups \
+    && chmod 755 /app/uploads /app/logs /app/backups
 
 # Create non-root user
 RUN useradd --create-home --shell /bin/bash app \

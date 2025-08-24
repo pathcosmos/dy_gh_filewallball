@@ -1,0 +1,43 @@
+# Task ID: 10
+# Title: MariaDB 데이터베이스 컨테이너 구성
+# Status: done
+# Dependencies: 9
+# Priority: high
+# Description: FileWallBall API를 위한 MariaDB 데이터베이스 컨테이너 설정 및 초기화가 완료되었습니다. 모든 테이블이 정상적으로 생성되고 데이터베이스 연결이 확인되었습니다.
+# Details:
+MariaDB 10.11 LTS 컨테이너가 정상 실행 중입니다. 'filewallball_db' 데이터베이스와 'filewallball_user' 사용자가 생성되었으며, files, file_uploads, file_downloads, project_keys, users, audit_logs 등 총 16개의 테이블이 정상적으로 생성되었습니다. 데이터 영속성을 위한 볼륨 마운트(/var/lib/mysql)가 설정되어 있고, 포트 3306이 내부 네트워크에 노출되어 있습니다. 초기 데이터 확인 결과 files 테이블에 0개 레코드로 정상 상태입니다.
+
+# Test Strategy:
+mysql 클라이언트 연결 테스트 완료. SHOW DATABASES 명령으로 'filewallball_db' 데이터베이스 생성 확인 완료. 16개 테이블 생성 및 기본 쿼리 작업 테스트 완료. 데이터베이스 연결 및 권한 설정 검증 완료.
+
+# Subtasks:
+## 1. MariaDB 10.11 LTS 컨테이너 실행 [completed]
+### Dependencies: None
+### Description: MariaDB 10.11 LTS 이미지를 사용하여 컨테이너를 실행합니다.
+### Details:
+
+
+## 2. 데이터베이스 및 사용자 생성 [completed]
+### Dependencies: None
+### Description: 'filewallball_db' 데이터베이스와 'filewallball_user' 사용자를 생성하고 권한을 설정합니다.
+### Details:
+
+
+## 3. 데이터베이스 스키마 초기화 [completed]
+### Dependencies: None
+### Description: init.sql 스크립트를 통해 필요한 16개 테이블을 생성합니다.
+### Details:
+
+
+## 4. 데이터베이스 연결 및 기능 테스트 [completed]
+### Dependencies: None
+### Description: mysql 클라이언트를 통한 연결 테스트 및 기본 CRUD 작업을 검증합니다.
+### Details:
+
+
+## 5. 데이터 영속성 및 볼륨 마운트 확인 [completed]
+### Dependencies: None
+### Description: /var/lib/mysql 볼륨 마운트가 정상적으로 설정되어 데이터가 영속적으로 저장되는지 확인합니다.
+### Details:
+
+

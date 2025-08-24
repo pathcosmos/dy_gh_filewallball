@@ -1,0 +1,11 @@
+# Task ID: 16
+# Title: 파일 다운로드 API 구현
+# Status: done
+# Dependencies: 15
+# Priority: high
+# Description: 파일 ID를 사용하여 업로드된 파일을 다운로드하는 기능을 구현합니다.
+# Details:
+GET /api/v1/files/{file_id}/download 엔드포인트 구현. 프로젝트 키 인증 필요. FileResponse로 파일 스트리밍 제공. Content-Disposition 헤더로 원본 파일명 설정. Range 요청 지원으로 부분 다운로드 가능. 다운로드 로그 기록. 파일 존재 여부 및 권한 검증.
+
+# Test Strategy:
+curl -H 'Authorization: Bearer {key}' http://localhost:8000/api/v1/files/{file_id}/download -o downloaded_file로 다운로드 테스트. 원본 파일과 다운로드 파일의 MD5 해시 비교. 파일 크기 일치성 확인.

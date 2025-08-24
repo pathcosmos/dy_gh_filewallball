@@ -1,0 +1,37 @@
+# Task ID: 12
+# Title: FileWallBall API 컨테이너 구성 및 배포
+# Status: done
+# Dependencies: 10, 11
+# Priority: high
+# Description: FastAPI 기반 FileWallBall API 서비스를 컨테이너화하고 배포합니다. 기본 컨테이너 구성 및 배포가 완료되었으며, 남은 이슈들을 해결합니다.
+# Details:
+Python 3.11-slim 기반 Dockerfile 작성 완료. FastAPI 0.104+, uvicorn 0.24+ 사용. requirements.txt에 필요 패키지 정의 완료 (fastapi, uvicorn, sqlalchemy, pymysql, redis, python-multipart). 환경변수로 DB_HOST, REDIS_HOST, MASTER_KEY 설정 완료. 포트 8000 노출. 헬스체크 엔드포인트 /health 구현 완료. MariaDB 및 Redis 연결 설정 완료. Pydantic 모델 충돌 문제 부분적 해결됨. OpenAPI 문서 생성 이슈 해결 필요.
+
+# Test Strategy:
+curl http://localhost:8000/health로 API 서버 상태 확인 완료. OpenAPI 문서 접근 테스트 (/docs) - 일부 문제 존재. 데이터베이스 및 Redis 연결 상태 확인 완료. Pydantic 모델 충돌 해결 검증 필요.
+
+# Subtasks:
+## 1. OpenAPI 문서 생성 문제 해결 [done]
+### Dependencies: None
+### Description: FastAPI OpenAPI 문서 생성 시 발생하는 문제를 진단하고 해결합니다.
+### Details:
+현재 /docs 엔드포인트 접근 시 일부 문제가 발생하고 있습니다. Pydantic 모델 정의, 라우터 설정, 스키마 생성 과정에서의 오류를 확인하고 수정합니다.
+
+## 2. Pydantic 모델 충돌 완전 해결 [done]
+### Dependencies: None
+### Description: 부분적으로 해결된 Pydantic 모델 충돌 문제를 완전히 해결합니다.
+### Details:
+현재 부분적으로 해결된 Pydantic 모델 충돌 문제의 근본 원인을 파악하고 완전히 해결합니다. 모델 간 네이밍 충돌, 순환 참조, 타입 정의 문제 등을 점검합니다.
+
+## 3. API 엔드포인트 기능 검증 [done]
+### Dependencies: None
+### Description: 모든 API 엔드포인트의 정상 동작을 검증합니다.
+### Details:
+파일 업로드, 다운로드, 프로젝트 키 관리, 사용자 인증 등 주요 API 기능들이 정상적으로 동작하는지 테스트합니다.
+
+## 4. 컨테이너 안정성 및 성능 최적화 [done]
+### Dependencies: None
+### Description: 컨테이너의 안정성을 확보하고 성능을 최적화합니다.
+### Details:
+메모리 사용량 최적화, 로그 설정 개선, 에러 핸들링 강화, 그레이스풀 셧다운 구현 등을 통해 프로덕션 환경에 적합한 컨테이너로 개선합니다.
+

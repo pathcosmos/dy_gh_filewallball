@@ -1,0 +1,43 @@
+# Task ID: 13
+# Title: 서비스 오케스트레이션 및 의존성 관리
+# Status: done
+# Dependencies: 12
+# Priority: high
+# Description: Docker Compose를 통해 모든 서비스의 시작 순서와 의존성을 관리하고, 발견된 API 타임아웃 문제를 해결합니다.
+# Details:
+depends_on 설정으로 서비스 시작 순서 제어 (mariadb → redis → api) 완료. healthcheck 설정으로 서비스 준비 상태 확인 완료. restart: unless-stopped 정책 적용 완료. 환경변수 파일(.env) 분리로 설정 관리 완료. 로그 드라이버 설정(json-file, max-size: 10m) 완료. 기본 인프라는 정상 동작하나 프로젝트 키 생성 API에서 Pydantic 모델 관련 타임아웃 문제 발생.
+
+# Test Strategy:
+docker-compose up -d로 전체 스택 시작 완료. docker-compose logs로 서비스 로그 확인 완료. 각 서비스의 헬스체크 상태 모니터링 완료. API 엔드포인트별 기능 테스트 및 타임아웃 문제 해결 확인.
+
+# Subtasks:
+## 1. 프로젝트 키 생성 API 타임아웃 문제 분석 [done]
+### Dependencies: None
+### Description: 프로젝트 키 생성 API에서 발생하는 타임아웃 문제의 원인을 분석합니다.
+### Details:
+Pydantic 모델 관련 타임아웃 문제 원인 파악. API 로그 분석 및 데이터베이스 쿼리 성능 확인. 메모리 사용량 및 처리 시간 모니터링.
+
+## 2. Pydantic 모델 최적화 [done]
+### Dependencies: None
+### Description: 타임아웃을 유발하는 Pydantic 모델을 최적화합니다.
+### Details:
+프로젝트 키 생성 관련 Pydantic 모델 검토. 불필요한 검증 로직 제거. 모델 직렬화/역직렬화 성능 개선.
+
+## 3. API 응답 시간 최적화 [done]
+### Dependencies: None
+### Description: 프로젝트 키 생성 API의 응답 시간을 최적화합니다.
+### Details:
+데이터베이스 쿼리 최적화. 비동기 처리 개선. 캐시 활용 검토. API 타임아웃 설정 조정.
+
+## 4. 전체 API 엔드포인트 기능 테스트 [done]
+### Dependencies: None
+### Description: 모든 API 엔드포인트의 정상 동작을 확인합니다.
+### Details:
+파일 업로드/다운로드 API 테스트. 프로젝트 키 관리 API 테스트. 사용자 관리 API 테스트. 각 엔드포인트별 응답 시간 측정.
+
+## 5. 서비스 모니터링 및 알림 설정 [done]
+### Dependencies: None
+### Description: 서비스 상태 모니터링과 문제 발생 시 알림 체계를 구축합니다.
+### Details:
+Prometheus 메트릭 수집 확인. Grafana 대시보드 설정. API 응답 시간 및 에러율 모니터링. 임계값 기반 알림 설정.
+

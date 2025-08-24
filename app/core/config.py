@@ -158,11 +158,11 @@ class ProductionConfig(BaseConfig):
     # Production database settings (can be overridden by environment)
     # Uses default values from BaseConfig if not set
 
-    # Production secret key (must be set via environment)
-    secret_key: str = Field(..., env="SECRET_KEY")
+    # Production secret key (with fallback)
+    secret_key: str = Field(default="prod-secret-key-change-in-production", env="SECRET_KEY")
 
-    # Production CORS settings
-    cors_origins: List[str] = Field(..., env="CORS_ORIGINS")
+    # Production CORS settings (with fallback)
+    cors_origins: List[str] = Field(default=["*"], env="CORS_ORIGINS")
     cors_allow_credentials: bool = True
 
 

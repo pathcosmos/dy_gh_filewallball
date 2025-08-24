@@ -1,0 +1,11 @@
+# Task ID: 15
+# Title: 파일 업로드 API 구현
+# Status: done
+# Dependencies: 14
+# Priority: high
+# Description: 프로젝트 키를 사용하여 파일을 업로드하는 기능을 구현합니다.
+# Details:
+POST /api/v1/files/upload 엔드포인트 구현. multipart/form-data로 파일 업로드 처리. 헤더에 Authorization: Bearer {project_key} 인증. 파일 저장 경로: /app/uploads/{project_id}/{file_id}. 파일 메타데이터 DB 저장 (파일명, 크기, MIME 타입, 업로드 시간). UUID4로 파일 ID 생성. 응답: {"file_id": "uuid", "download_url": "string"}.
+
+# Test Strategy:
+다양한 파일 형식(txt, jpg, pdf, zip)으로 업로드 테스트. curl -X POST -H 'Authorization: Bearer {key}' -F 'file=@test.txt' http://localhost:8000/api/v1/files/upload 명령 사용. 파일 크기 제한 테스트.

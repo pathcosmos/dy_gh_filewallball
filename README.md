@@ -20,6 +20,54 @@ FastAPI 기반의 안전한 파일 업로드/조회/다운로드 API 시스템�
 - **캐싱**: Redis 기반 고성능 캐싱 시스템
 - **백그라운드 작업**: 비동기 파일 처리, 썸네일 생성
 
+## ⚡ 빠른 시작 요약
+
+### 🐳 Docker Compose로 즉시 실행 (5분)
+
+```bash
+# 1. 저장소 클론
+git clone <repository-url>
+cd fileWallBall
+
+# 2. 개발 환경 시작
+docker-compose --env-file .env.dev up -d
+
+# 3. 서비스 상태 확인
+docker-compose --env-file .env.dev ps
+
+# 4. API 테스트
+curl http://localhost:8000/health
+curl http://localhost:8000/files
+
+# 5. API 문서 확인
+open http://localhost:8000/docs
+```
+
+### 🔄 환경 전환
+
+```bash
+# 개발 → 프로덕션
+docker-compose --env-file .env.dev down
+docker-compose --env-file .env.prod up -d
+
+# 프로덕션 → 개발
+docker-compose --env-file .env.prod down
+docker-compose --env-file .env.dev up -d
+```
+
+### 📊 모니터링
+
+```bash
+# 실시간 로그
+docker-compose --env-file .env.prod logs -f
+
+# 리소스 사용량
+docker stats
+
+# 서비스 상태
+docker-compose --env-file .env.prod ps
+```
+
 ## 🏗️ 아키텍처
 
 ```
@@ -50,12 +98,141 @@ FastAPI 기반의 안전한 파일 업로드/조회/다운로드 API 시스템�
 - **Python 3.11+**
 - **uv** (Python 패키지 관리자)
 
+## 🚀 실제 기동 방법
+
+### 🐳 Docker Compose를 사용한 빠른 시작 (권장)
+
+#### 1. 환경별 실행 방법
+
+**개발 환경 실행:**
+```bash
+# 개발 환경 시작
+docker-compose --env-file .env.dev up -d
+
+# 서비스 상태 확인
+docker-compose --env-file .env.dev ps
+
+# 로그 확인
+docker-compose --env-file .env.dev logs -f app
+
+# 개발 환경 중지
+docker-compose --env-file .env.dev down
+```
+
+**프로덕션 환경 실행:**
+```bash
+# 프로덕션 환경 시작
+docker-compose --env-file .env.prod up -d
+
+# 서비스 상태 확인
+docker-compose --env-file .env.prod ps
+
+# 로그 확인
+docker-compose --env-file .env.prod logs -f app
+
+# 프로덕션 환경 중지
+docker-compose --env-file .env.prod down
+```
+
+#### 2. 환경 전환
+
+```bash
+# 개발 환경에서 프로덕션 환경으로 전환
+docker-compose --env-file .env.dev down
+docker-compose --env-file .env.prod up -d
+
+# 프로덕션 환경에서 개발 환경으로 전환
+docker-compose --env-file .env.prod down
+docker-compose --env-file .env.dev up -d
+```
+
+#### 3. 서비스 모니터링
+
+```bash
+# 실시간 서비스 상태 확인
+docker-compose --env-file .env.prod ps
+
+# 리소스 사용량 확인
+docker stats
+
+# 특정 서비스 로그 확인
+docker-compose --env-file .env.prod logs -f app      # 애플리케이션 로그
+docker-compose --env-file .env.prod logs -f mariadb  # 데이터베이스 로그
+docker-compose --env-file .env.prod logs -f redis    # Redis 로그 (선택사항)
+```
+
+#### 4. 헬스체크 및 API 테스트
+
+```bash
+# 헬스체크 확인
+curl http://localhost:8000/health
+
+# API 문서 확인
+curl http://localhost:8000/docs
+
+# 파일 목록 확인
+curl http://localhost:8000/files
+
+# 전체 서비스 상태 확인
+docker-compose --env-file .env.prod exec app curl -f http://localhost:8000/health
+```
+
+#### 5. 문제 해결
+
+```bash
+# 서비스 재시작
+docker-compose --env-file .env.prod restart app
+
+# 특정 서비스만 재시작
+docker-compose --env-file .env.prod restart mariadb
+
+# 컨테이너 내부 접속
+docker-compose --env-file .env.prod exec app bash
+docker-compose --env-file .env.prod exec mariadb mysql -u root -p
+
+# 환경 변수 확인
+docker-compose --env-file .env.prod exec app env | grep -E "ENVIRONMENT|DEBUG|LOG_LEVEL"
+```
+
+### 🔧 환경별 설정 파일
+
+#### 개발 환경 (.env.dev)
+- `DEBUG=true`
+- `LOG_LEVEL=DEBUG`
+- `ENVIRONMENT=development`
+- 로컬 Docker 컨테이너 사용
+- `DB_HOST=mariadb`, `DB_PORT=3306`
+
+#### 프로덕션 환경 (.env.prod)
+- `DEBUG=false`
+- `LOG_LEVEL=WARNING`
+- `ENVIRONMENT=production`
+- 외부 데이터베이스 사용
+- `DB_HOST=pathcosmos.iptime.org`, `DB_PORT=33377`
+
+### 📊 환경별 성능 설정
+
+#### 개발 환경
+- 핫 리로드 활성화 (`--reload`)
+- 리소스 제한 없음
+- 디버그 모드 활성화
+
+#### 프로덕션 환경
+- 4개 워커 프로세스 (`--workers 4`)
+- 메모리 제한: 1GB
+- CPU 제한: 1.0 코어
+- 자동 재시작 (`restart: always`)
+
+---
+
 ## 🛠️ 설치 및 배포
 
 ### 📋 시스템 요구사항
 
 - **운영체제**: Linux, macOS, Windows (Windows는 WSL2 권장)
 - **Python**: 3.11 이상
+- **Docker**: 20.10 이상
+- **Docker Compose**: 2.0 이상
 - **메모리**: 최소 4GB RAM
 - **디스크 공간**: 최소 2GB 여유 공간
 
@@ -687,6 +864,142 @@ curl "http://localhost:8000/health"
 ### HPA 상태 확인
 ```bash
 kubectl get hpa -n filewallball
+```
+
+## 🚀 프로덕션 환경 운영 가이드
+
+### 📋 프로덕션 배포 체크리스트
+
+#### 배포 전 확인사항
+- [ ] `.env.prod` 파일 설정 완료
+- [ ] 외부 데이터베이스 연결 확인
+- [ ] 보안 환경 변수 설정
+- [ ] 리소스 제한 설정 확인
+
+#### 배포 후 확인사항
+- [ ] 모든 서비스 정상 시작
+- [ ] 헬스체크 통과
+- [ ] API 엔드포인트 동작 확인
+- [ ] 로그 모니터링 설정
+
+### 🔧 프로덕션 환경 관리
+
+#### 서비스 상태 모니터링
+```bash
+# 전체 서비스 상태 확인
+docker-compose --env-file .env.prod ps
+
+# 실시간 로그 모니터링
+docker-compose --env-file .env.prod logs -f
+
+# 특정 서비스 로그 확인
+docker-compose --env-file .env.prod logs -f app
+docker-compose --env-file .env.prod logs -f mariadb
+```
+
+#### 성능 모니터링
+```bash
+# 리소스 사용량 확인
+docker stats --no-stream
+
+# 컨테이너별 상세 정보
+docker-compose --env-file .env.prod top
+
+# 네트워크 상태 확인
+docker network ls
+docker network inspect dy_gh_filewallball_app-network
+```
+
+#### 백업 및 복구
+```bash
+# 데이터베이스 백업
+docker-compose --env-file .env.prod exec mariadb mysqldump -u root -p filewallball_db > backup.sql
+
+# 볼륨 백업
+docker run --rm -v filewallball_uploads_prod_data:/data -v $(pwd):/backup alpine tar czf /backup/uploads_backup.tar.gz -C /data .
+
+# 백업 복구
+docker-compose --env-file .env.prod exec -T mariadb mysql -u root -p filewallball_db < backup.sql
+```
+
+### 🚨 문제 해결
+
+#### 일반적인 프로덕션 문제
+
+**1. 서비스 재시작 문제**
+```bash
+# 서비스 강제 재시작
+docker-compose --env-file .env.prod restart app
+
+# 컨테이너 상태 확인
+docker-compose --env-file .env.prod ps app
+
+# 로그 분석
+docker-compose --env-file .env.prod logs app --tail=100
+```
+
+**2. 데이터베이스 연결 문제**
+```bash
+# 데이터베이스 상태 확인
+docker-compose --env-file .env.prod exec mariadb mysqladmin ping -h localhost -u root -p
+
+# 연결 테스트
+docker-compose --env-file .env.prod exec app python -c "
+from app.core.config import settings
+print(f'DB Host: {settings.db_host}')
+print(f'DB Port: {settings.db_port}')
+print(f'DB Name: {settings.db_name}')
+"
+```
+
+**3. 리소스 부족 문제**
+```bash
+# 리소스 사용량 확인
+docker stats --no-stream
+
+# 컨테이너 리소스 제한 확인
+docker-compose --env-file .env.prod config | grep -A 10 "deploy:"
+```
+
+### 📈 성능 최적화
+
+#### 워커 프로세스 조정
+```bash
+# 프로덕션 환경에서 워커 수 조정
+# docker-compose.prod.yml 수정
+command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "8"]
+
+# 설정 적용
+docker-compose --env-file .env.prod up -d --force-recreate app
+```
+
+#### 캐시 최적화
+```bash
+# Redis 캐시 상태 확인
+docker-compose --env-file .env.prod exec redis redis-cli info memory
+
+# 캐시 통계 확인
+docker-compose --env-file .env.prod exec redis redis-cli info stats
+```
+
+### 🔒 보안 강화
+
+#### 환경 변수 보안
+```bash
+# 민감한 정보 확인
+docker-compose --env-file .env.prod exec app env | grep -E "PASSWORD|SECRET|KEY"
+
+# 환경 변수 파일 권한 설정
+chmod 600 .env.prod
+```
+
+#### 컨테이너 보안
+```bash
+# 보안 설정 확인
+docker-compose --env-file .env.prod config | grep -A 5 "security_opt:"
+
+# 사용자 권한 확인
+docker-compose --env-file .env.prod exec app whoami
 ```
 
 ## 🔧 설정

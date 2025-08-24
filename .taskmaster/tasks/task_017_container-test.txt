@@ -1,0 +1,11 @@
+# Task ID: 17
+# Title: 파일 정보 조회 API 구현
+# Status: done
+# Dependencies: 15
+# Priority: medium
+# Description: 업로드된 파일의 메타데이터를 조회하는 기능을 구현합니다.
+# Details:
+GET /api/v1/files/{file_id} 엔드포인트 구현. 프로젝트 키 인증으로 해당 프로젝트 파일만 조회 가능. 응답 데이터: {"file_id": "uuid", "filename": "string", "size": "number", "mime_type": "string", "uploaded_at": "datetime", "download_count": "number"}. Redis 캐시로 조회 성능 최적화.
+
+# Test Strategy:
+curl -H 'Authorization: Bearer {key}' http://localhost:8000/api/v1/files/{file_id}로 파일 정보 조회. 존재하지 않는 파일 ID로 404 에러 테스트. 다른 프로젝트 파일 접근 시 403 에러 테스트.
