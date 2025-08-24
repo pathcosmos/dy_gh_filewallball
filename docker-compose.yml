@@ -1,0 +1,188 @@
+version: '3.8'
+
+services:
+  # MariaDB Database
+  mariadb:
+    image: mariadb:10.11
+    container_name: filewallball-mariadb
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root_password}
+      MYSQL_DATABASE: ${DB_NAME:-filewallball_db}
+      MYSQL_USER: ${DB_USER:-filewallball_user}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-filewallball_user_password}
+      MYSQL_INITDB_SKIP_TZINFO: 1
+    volumes:
+      - mariadb_data:/var/lib/mysql
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+      - mariadb_backups:/var/backups
+    ports:
+      - "${DB_PORT:-3306}:3306"
+    networks:
+      - app-network
+    security_opt:
+      - no-new-privileges:true
+    read_only: false
+    tmpfs:
+      - /tmp
+      - /var/tmp
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD:-root_password}"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+      disable: false
+
+  # FastAPI Application
+  app:
+    build: .
+    container_name: filewallball-app
+    restart: unless-stopped
+    environment:
+      - DB_HOST=mariadb
+      - DB_PORT=3306
+      - DB_NAME=${DB_NAME:-filewallball_db}
+      - DB_USER=${DB_USER:-filewallball_user}
+      - DB_PASSWORD=${DB_PASSWORD:-filewallball_user_password}
+      - UPLOAD_DIR=/app/uploads
+      - HOST_UPLOAD_DIR=${HOST_UPLOAD_DIR:-./uploads}
+      - CONTAINER_UPLOAD_DIR=/app/uploads
+      - STORAGE_TYPE=${STORAGE_TYPE:-local}
+      - MAX_FILE_SIZE=${MAX_FILE_SIZE:-104857600}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - DEBUG=${DEBUG:-false}
+      - ENVIRONMENT=${ENVIRONMENT:-development}
+    volumes:
+      - uploads_data:/app/uploads
+      - logs_data:/app/logs
+      - backups_data:/app/backups
+      - ${HOST_UPLOAD_DIR:-./uploads}:${CONTAINER_UPLOAD_DIR:-/app/uploads}
+    ports:
+      - "${APP_PORT:-8000}:8000"
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+      disable: false
+
+  # Nginx Reverse Proxy (Optional)
+  nginx:
+    image: nginx:alpine
+    container_name: filewallball-nginx
+    restart: unless-stopped
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - uploads_data:/var/www/uploads:ro
+    ports:
+      - "${NGINX_PORT:-80}:80"
+      - "${NGINX_SSL_PORT:-443}:443"
+    depends_on:
+      app:
+        condition: service_healthy
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+      disable: false
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/tmp
+      - /var/cache/nginx
+      - /var/run
+    profiles:
+      - production
+
+  # Backup Service
+  backup:
+    build:
+      context: .
+      dockerfile: Dockerfile.backup
+    image: dy_gh_filewallball-backup
+    container_name: filewallball-backup
+    restart: unless-stopped
+    volumes:
+      - uploads_dev_data:/app/uploads:ro
+      - logs_dev_data:/app/logs:ro
+      - mariadb_dev_data:/app/mariadb:ro
+      - mariadb_backups:/app/mariadb_backups:ro
+      - backups_data:/host-backups
+      - ./docker-compose.yml:/app/docker-compose.yml:ro
+      - ./docker-compose.dev.yml:/app/docker-compose.dev.yml:ro
+      - ./docker-compose.prod.yml:/app/docker-compose.prod.yml:ro
+      - ./Dockerfile:/app/Dockerfile:ro
+      - ./nginx:/app/nginx:ro
+      - ./scripts:/app/scripts:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      - DB_HOST=mariadb
+      - DB_PORT=3306
+      - DB_ROOT_PASSWORD=${DB_ROOT_PASSWORD:-root_password}
+      - BACKUP_RETENTION_DAYS=${BACKUP_RETENTION_DAYS:-7}
+      - BACKUP_SCHEDULE=${BACKUP_SCHEDULE:-0 2 * * *}
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "ps", "aux"]
+      interval: 60s
+      timeout: 10s
+      retries: 2
+      start_period: 30s
+      disable: false
+    security_opt:
+      - no-new-privileges:true
+    read_only: false
+    tmpfs:
+      - /tmp
+      - /var/tmp
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    profiles:
+      - backup
+
+volumes:
+  mariadb_data:
+    driver: local
+  mariadb_backups:
+    driver: local
+  uploads_data:
+    driver: local
+  logs_data:
+    driver: local
+  backups_data:
+    driver: local
+  uploads_dev_data:
+    driver: local
+  logs_dev_data:
+    driver: local
+  mariadb_dev_data:
+    driver: local
+
+networks:
+  app-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+        - gateway: 172.20.0.1
+    driver_opts:
+      com.docker.network.bridge.name: filewallball-br0
+    labels:
+      - "com.docker.compose.network=app-network"
+      - "com.docker.compose.project=dy_gh_filewallball"

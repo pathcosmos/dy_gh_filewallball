@@ -1,0 +1,128 @@
+version: '3.8'
+
+# Development environment overrides
+services:
+  # MariaDB Database - Development
+  mariadb:
+    environment:
+      MYSQL_ROOT_PASSWORD: dev_root_password
+      MYSQL_DATABASE: filewallball_dev
+      MYSQL_USER: filewallball_dev_user
+      MYSQL_PASSWORD: dev_password
+    ports:
+      - "3306:3306"  # Expose for local development
+    volumes:
+      - mariadb_dev_data:/var/lib/mysql
+      - ./scripts/init-db-dev.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pdev_root_password"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+      disable: false
+    security_opt:
+      - no-new-privileges:true
+    read_only: false
+    tmpfs:
+      - /tmp
+      - /var/tmp
+
+  # FastAPI Application - Development
+  app:
+    environment:
+      - DEBUG=true
+      - ENVIRONMENT=development
+      - LOG_LEVEL=DEBUG
+      - DB_HOST=mariadb
+      - DB_NAME=filewallball_dev
+      - DB_USER=filewallball_dev_user
+      - DB_PASSWORD=dev_password
+    ports:
+      - "8000:8000"  # Expose for local development
+    volumes:
+      - .:/app  # Mount source code for hot reload
+      - uploads_dev_data:/app/uploads
+      - logs_dev_data:/app/logs
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+      disable: false
+    security_opt:
+      - no-new-privileges:true
+    read_only: false
+    tmpfs:
+      - /tmp
+      - /var/tmp
+    profiles: []
+
+  # Redis for Development (Optional)
+  redis:
+    image: redis:7-alpine
+    container_name: filewallball-redis-dev
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_dev_data:/data
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+      disable: false
+    security_opt:
+      - no-new-privileges:true
+    read_only: false
+    tmpfs:
+      - /tmp
+    profiles: []
+
+  # Adminer for Database Management
+  adminer:
+    image: adminer:latest
+    container_name: filewallball-adminer
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      ADMINER_DEFAULT_SERVER: mariadb
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+      disable: false
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/tmp
+    profiles: []
+
+volumes:
+  mariadb_dev_data:
+    driver: local
+  uploads_dev_data:
+    driver: local
+  logs_dev_data:
+    driver: local
+  redis_dev_data:
+    driver: local
+
+# Use existing network from base compose
+networks:
+  app-network:
+    external: false

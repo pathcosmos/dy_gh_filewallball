@@ -1,0 +1,56 @@
+FROM ubuntu:22.04
+
+# Set environment variables
+ENV DEBIAN_FRONTEND=noninteractive
+ENV TZ=Asia/Seoul
+
+# Install required packages
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        default-mysql-client \
+        tar \
+        gzip \
+        bzip2 \
+        xz-utils \
+        curl \
+        wget \
+        gnupg \
+        ca-certificates \
+        tzdata \
+        cron \
+        rsync \
+        openssh-client \
+        python3 \
+        python3-pip \
+        python3-requests \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create backup user
+RUN useradd -r -s /bin/bash -m backup || true
+
+# Create necessary directories
+RUN mkdir -p /backup /host-backups /restore /rollback \
+    && mkdir -p /backup/db /backup/uploads /backup/logs /backup/config \
+    && chown -R backup:backup /backup /host-backups /restore /rollback
+
+# Copy scripts
+COPY scripts/ /app/scripts/
+RUN chmod +x /app/scripts/*.sh \
+    && chown -R backup:backup /app/scripts
+
+# Install Python dependencies for cloud storage
+RUN pip3 install --no-cache-dir \
+    requests
+
+# Set working directory
+WORKDIR /app
+
+# Switch to backup user
+USER backup
+
+# Health check
+HEALTHCHECK --interval=60s --timeout=10s --start-period=30s --retries=3 \
+    CMD ps aux || exit 1
+
+# Default command
+CMD ["tail", "-f", "/dev/null"]

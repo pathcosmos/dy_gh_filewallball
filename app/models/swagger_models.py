@@ -131,12 +131,12 @@ class FileUploadResponse(BaseModel):
     download_url: str = Field(
         ...,
         description="다운로드 URL",
-        example="/api/v1/files/550e8400-e29b-41d4-a716-446655440000/download",
+        example="/download/550e8400-e29b-41d4-a716-446655440000",
     )
     preview_url: str = Field(
         ...,
         description="미리보기 URL",
-        example="/api/v1/files/550e8400-e29b-41d4-a716-446655440000/preview",
+        example="/view/550e8400-e29b-41d4-a716-446655440000",
     )
 
     class Config:
@@ -151,8 +151,8 @@ class FileUploadResponse(BaseModel):
                 "tags": ["presentation", "business"],
                 "is_public": True,
                 "description": "분기별 실적 보고서",
-                "download_url": "/api/v1/files/550e8400-e29b-41d4-a716-446655440000/download",
-                "preview_url": "/api/v1/files/550e8400-e29b-41d4-a716-446655440000/preview",
+                "download_url": "/download/550e8400-e29b-41d4-a716-446655440000",
+                "preview_url": "/view/550e8400-e29b-41d4-a716-446655440000",
             }
         }
 

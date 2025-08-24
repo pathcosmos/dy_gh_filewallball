@@ -184,7 +184,7 @@ class FileListService:
                 file_id = file_info["file_id"]
                 file_info["download_url"] = f"{base_url}/download/{file_id}"
                 file_info["view_url"] = f"{base_url}/view/{file_id}"
-                file_info["thumbnail_url"] = f"{base_url}/api/v1/thumbnails/{file_id}"
+                file_info["thumbnail_url"] = f"{base_url}/thumbnails/{file_id}"
 
             return {
                 "items": paginated_files,
@@ -502,7 +502,7 @@ class FileListService:
                 file_id = file_info["file_id"]
                 file_info["download_url"] = f"{base_url}/download/{file_id}"
                 file_info["view_url"] = f"{base_url}/view/{file_id}"
-                file_info["thumbnail_url"] = f"{base_url}/api/v1/thumbnails/{file_id}"
+                file_info["thumbnail_url"] = f"{base_url}/thumbnails/{file_id}"
 
             return {
                 "items": paginated_results,
