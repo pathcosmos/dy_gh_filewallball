@@ -1,6 +1,7 @@
 # FileWallBall API System
 
-FastAPI 기반의 안전한 파일 업로드/조회/다운로드 API 시스템입니다. MicroK8s 환경에서 구동되며, 실시간 요청에 따른 자동 스케일링을 지원합니다.
+FastAPI 기반의 안전한 파일 업로드/조회/다운로드 API 시스템입니다. 
+Docker Compose 환경에서 구동되며, 모듈화된 라우터 구조와 종합적인 문서화를 지원합니다.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
@@ -12,22 +13,20 @@ FastAPI 기반의 안전한 파일 업로드/조회/다운로드 API 시스템�
 - **파일 미리보기**: GET `/view/{file_id}` - 텍스트 파일 미리보기
 - **파일 목록**: GET `/files` - 업로드된 파일 목록 조회
 - **파일 삭제**: DELETE `/files/{file_id}` - 파일 삭제
-- **고급 파일 저장소**: 호스트 OS와 컨테이너 경로 유연한 매핑, 다중 저장소 지원 (Local, S3, Azure, GCS)
-- **파일 저장 구조**: 날짜 기반, UUID 기반, 평면 구조 등 다양한 저장 방식 지원
-- **자동 스케일링**: HPA를 통한 실시간 스케일링
-- **모니터링**: Prometheus 메트릭 제공
-- **보안**: IP 기반 인증, RBAC 권한 관리, 레이트 리미팅
-- **캐싱**: Redis 기반 고성능 캐싱 시스템
-- **백그라운드 작업**: 비동기 파일 처리, 썸네일 생성
+- **프로젝트 키 생성**: POST `/keygen` - 프로젝트별 API 키 생성
+- **시스템 상태 확인**: GET `/health` - 시스템 헬스체크
+- **모듈화된 API 구조**: 파일, 다운로드, 시스템 관리 라우터로 구성
+- **MariaDB + Redis**: 안정적인 데이터 저장 및 캐싱
+- **Docker Compose**: 간편한 개발 및 배포 환경
 
-## ⚡ 빠른 시작 요약
+## ⚡ 빠른 시작 (5분)
 
-### 🐳 Docker Compose로 즉시 실행 (5분)
+### 🐳 Docker Compose로 즉시 실행
 
 ```bash
 # 1. 저장소 클론
-git clone <repository-url>
-cd fileWallBall
+git clone https://github.com/pathcosmos/dy_gh_filewallball.git
+cd dy_gh_filewallball
 
 # 2. 개발 환경 시작
 docker-compose --env-file .env.dev up -d
@@ -72,14 +71,14 @@ docker-compose --env-file .env.prod ps
 
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Client        │    │   Ingress       │    │   FastAPI       │
-│   (Browser/App) │───▶│   Controller    │───▶│   Application   │
+│   Client        │    │   Nginx         │    │   FastAPI       │
+│   (Browser/App) │───▶│   Reverse Proxy │───▶│   Application   │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
                                                        │
                                                        ▼
                                               ┌─────────────────┐
-                                              │   Redis         │
-                                              │   (Cache)       │
+                                              │   MariaDB       │
+                                              │   (Database)    │
                                               └─────────────────┘
                                                        │
                                                        ▼
@@ -89,14 +88,28 @@ docker-compose --env-file .env.prod ps
                                               └─────────────────┘
 ```
 
+### 🔧 모듈화된 라우터 구조
+
+```
+app/
+├── main.py              # FastAPI 애플리케이션 메인
+├── routers/             # 모듈화된 API 라우터
+│   ├── __init__.py
+│   ├── files.py         # 파일 관리 엔드포인트
+│   ├── download.py      # 파일 다운로드 및 뷰어
+│   └── system.py        # 시스템 관리 엔드포인트
+├── config.py            # 설정 관리
+├── models/              # 데이터 모델
+├── services/            # 비즈니스 로직
+└── utils/               # 유틸리티 함수
+```
+
 ## 📋 요구사항
 
-- MicroK8s
-- Docker
-- kubectl
-- curl, jq (테스트용)
-- **Python 3.11+**
-- **uv** (Python 패키지 관리자)
+- **Docker**: 20.10 이상
+- **Docker Compose**: 2.0 이상
+- **메모리**: 최소 2GB RAM
+- **디스크 공간**: 최소 1GB 여유 공간
 
 ## 🚀 실제 기동 방법
 
@@ -134,295 +147,6 @@ docker-compose --env-file .env.prod logs -f app
 docker-compose --env-file .env.prod down
 ```
 
-### 📋 **상세한 구동 가이드 (단계별)**
-
-#### **🔧 사전 준비사항**
-
-**1. 시스템 요구사항 확인:**
-```bash
-# Docker 및 Docker Compose 버전 확인
-docker --version          # Docker 20.10 이상 필요
-docker-compose --version  # Docker Compose 2.0 이상 필요
-
-# 시스템 리소스 확인
-free -h                   # 최소 4GB RAM 필요
-df -h                     # 최소 2GB 여유 공간 필요
-```
-
-**2. 프로젝트 클론 및 설정:**
-```bash
-# 저장소 클론
-git clone <repository-url>
-cd dy_gh_filewallball
-
-# 환경 변수 파일 확인
-ls -la .env*
-# .env.dev (개발용), .env.prod (프로덕션용), .env (기본)
-```
-
-#### **🚀 개발 환경 구동 (단계별)**
-
-**1단계: 개발 환경 시작**
-```bash
-# 개발 환경으로 서비스 시작
-docker-compose --env-file .env.dev up -d
-
-# 실행 결과 확인
-# [+] Running 2/2
-#  ✔ Container filewallball-mariadb  Healthy
-#  ✔ Container filewallball-app      Started
-```
-
-**2단계: 서비스 상태 확인**
-```bash
-# 전체 서비스 상태 확인
-docker-compose --env-file .env.dev ps
-
-# 예상 출력:
-# NAME                     STATUS              PORTS
-# filewallball-app         Up 10 seconds       0.0.0.0:18000->8000/tcp
-# filewallball-mariadb     Up 15 seconds       0.0.0.0:13306->3306/tcp
-# filewallball-redis-dev   Up 2 hours          0.0.0.0:16379->6379/tcp
-# filewallball-adminer     Up 2 hours          0.0.0.0:18080->8080/tcp
-```
-
-**3단계: 서비스 헬스체크**
-```bash
-# 애플리케이션 헬스체크
-curl http://localhost:18000/health
-
-# 예상 응답:
-# {
-#   "status": "healthy",
-#   "timestamp": "2025-08-24T16:20:00.000000",
-#   "service": "FileWallBall API",
-#   "version": "2.0.0"
-# }
-```
-
-**4단계: 데이터베이스 연결 확인**
-```bash
-# MariaDB 컨테이너 상태 확인
-docker-compose --env-file .env.dev exec mariadb mysqladmin ping -h localhost
-
-# 데이터베이스 접속 테스트
-docker-compose --env-file .env.dev exec mariadb mysql -u filewallball -p -e "SHOW DATABASES;"
-```
-
-**5단계: API 기능 테스트**
-```bash
-# 파일 목록 조회
-curl http://localhost:18000/files
-
-# 파일 업로드 테스트
-echo "Test file content" > test.txt
-curl -X POST -F "file=@test.txt" http://localhost:18000/upload
-
-# API 문서 확인
-open http://localhost:18000/docs  # 또는 브라우저에서 접속
-```
-
-#### **🏭 프로덕션 환경 구동 (단계별)**
-
-**1단계: 프로덕션 환경 시작**
-```bash
-# 프로덕션 환경으로 서비스 시작
-docker-compose --env-file .env.prod up -d
-
-# 실행 결과 확인
-# [+] Running 2/2
-#  ✔ Container filewallball-mariadb  Healthy
-#  ✔ Container filewallball-app      Started
-```
-
-**2단계: 프로덕션 설정 검증**
-```bash
-# 환경 변수 확인
-docker-compose --env-file .env.prod exec app env | grep -E "ENVIRONMENT|DEBUG|LOG_LEVEL"
-
-# 예상 출력:
-# ENVIRONMENT=production
-# DEBUG=false
-# LOG_LEVEL=WARNING
-```
-
-**3단계: 프로덕션 성능 설정 확인**
-```bash
-# 워커 프로세스 확인
-docker-compose --env-file .env.prod exec app ps aux | grep uvicorn
-
-# 리소스 제한 확인
-docker stats --no-stream
-```
-
-**4단계: 프로덕션 보안 설정 확인**
-```bash
-# 포트 노출 상태 확인
-docker-compose --env-file .env.prod ps
-
-# 보안 옵션 확인
-docker-compose --env-file .env.prod config | grep -A 5 "security_opt:"
-```
-
-#### **🔄 환경 전환 방법**
-
-**개발 → 프로덕션 전환:**
-```bash
-# 1. 개발 환경 중지
-docker-compose --env-file .env.dev down
-
-# 2. 프로덕션 환경 시작
-docker-compose --env-file .env.prod up -d
-
-# 3. 전환 확인
-docker-compose --env-file .env.prod ps
-curl http://localhost:18000/health
-```
-
-**프로덕션 → 개발 전환:**
-```bash
-# 1. 프로덕션 환경 중지
-docker-compose --env-file .env.prod down
-
-# 2. 개발 환경 시작
-docker-compose --env-file .env.dev up -d
-
-# 3. 전환 확인
-docker-compose --env-file .env.dev ps
-curl http://localhost:18000/health
-```
-
-#### **📊 모니터링 및 로그 관리**
-
-**실시간 모니터링:**
-```bash
-# 서비스 상태 실시간 모니터링
-docker-compose --env-file .env.prod ps
-
-# 리소스 사용량 모니터링
-docker stats --no-stream
-
-# 네트워크 상태 확인
-docker network ls
-docker network inspect dy_gh_filewallball_app-network
-```
-
-**로그 관리:**
-```bash
-# 전체 서비스 로그 확인
-docker-compose --env-file .env.prod logs -f
-
-# 특정 서비스 로그 확인
-docker-compose --env-file .env.prod logs -f app      # 애플리케이션 로그
-docker-compose --env-file .env.prod logs -f mariadb  # 데이터베이스 로그
-docker-compose --env-file .env.prod logs -f redis    # Redis 로그
-
-# 로그 레벨별 필터링
-docker-compose --env-file .env.prod logs app | grep ERROR
-docker-compose --env-file .env.prod logs app | grep WARNING
-```
-
-#### **🔍 문제 해결 및 디버깅**
-
-**일반적인 문제 해결:**
-```bash
-# 1. 서비스 재시작
-docker-compose --env-file .env.prod restart app
-
-# 2. 특정 서비스만 재시작
-docker-compose --env-file .env.prod restart mariadb
-
-# 3. 컨테이너 내부 접속
-docker-compose --env-file .env.prod exec app bash
-docker-compose --env-file .env.prod exec mariadb mysql -u root -p
-
-# 4. 환경 변수 확인
-docker-compose --env-file .env.prod exec app env | grep -E "ENVIRONMENT|DEBUG|LOG_LEVEL"
-```
-
-**데이터베이스 문제 해결:**
-```bash
-# 데이터베이스 연결 테스트
-docker-compose --env-file .env.prod exec mariadb mysqladmin ping -h localhost
-
-# 데이터베이스 상태 확인
-docker-compose --env-file .env.prod exec mariadb mysql -u root -p -e "SHOW PROCESSLIST;"
-
-# 사용자 권한 확인
-docker-compose --env-file .env.prod exec mariadb mysql -u root -p -e "SHOW GRANTS FOR 'filewallball'@'%';"
-```
-
-**네트워크 문제 해결:**
-```bash
-# 네트워크 상태 확인
-docker network ls
-docker network inspect dy_gh_filewallball_app-network
-
-# 컨테이너 간 통신 테스트
-docker-compose --env-file .env.prod exec app ping mariadb
-docker-compose --env-file .env.prod exec app curl -f http://localhost:18000/health
-```
-
-#### **📁 파일 관리 및 백업**
-
-**파일 업로드/다운로드 테스트:**
-```bash
-# 파일 업로드
-echo "Test content" > test.txt
-curl -X POST -F "file=@test.txt" http://localhost:18000/upload
-
-# 파일 목록 조회
-curl http://localhost:18000/files
-
-# 파일 다운로드
-curl -O http://localhost:18000/download/{file_id}
-
-# 파일 미리보기
-curl http://localhost:18000/view/{file_id}
-```
-
-**백업 및 복구:**
-```bash
-# 데이터베이스 백업
-docker-compose --env-file .env.prod exec mariadb mysqldump -u root -p filewallball_db > backup.sql
-
-# 볼륨 백업
-docker run --rm -v filewallball_uploads_prod_data:/data -v $(pwd):/backup alpine tar czf /backup/uploads_backup.tar.gz -C /data .
-
-# 백업 복구
-docker-compose --env-file .env.prod exec -T mariadb mysql -u root -p filewallball_db < backup.sql
-```
-
-#### **⚙️ 고급 설정 및 최적화**
-
-**성능 최적화:**
-```bash
-# 워커 프로세스 수 조정
-# docker-compose.prod.yml 수정 후
-docker-compose --env-file .env.prod up -d --force-recreate app
-
-# 리소스 제한 조정
-# docker-compose.prod.yml의 deploy 섹션 수정
-```
-
-**캐시 최적화:**
-```bash
-# Redis 캐시 상태 확인
-docker-compose --env-file .env.prod exec redis redis-cli info memory
-
-# 캐시 통계 확인
-docker-compose --env-file .env.prod exec redis redis-cli info stats
-```
-
-**보안 강화:**
-```bash
-# 환경 변수 파일 권한 설정
-chmod 600 .env.prod
-
-# 민감한 정보 확인
-docker-compose --env-file .env.prod exec app env | grep -E "PASSWORD|SECRET|KEY"
-```
-
 #### 2. 환경 전환
 
 ```bash
@@ -447,7 +171,6 @@ docker stats
 # 특정 서비스 로그 확인
 docker-compose --env-file .env.prod logs -f app      # 애플리케이션 로그
 docker-compose --env-file .env.prod logs -f mariadb  # 데이터베이스 로그
-docker-compose --env-file .env.prod logs -f redis    # Redis 로그 (선택사항)
 ```
 
 #### 4. 헬스체크 및 API 테스트
@@ -491,15 +214,15 @@ docker-compose --env-file .env.prod exec app env | grep -E "ENVIRONMENT|DEBUG|LO
 - `ENVIRONMENT=development`
 - 로컬 Docker 컨테이너 사용
 - `DB_HOST=mariadb`, `DB_PORT=13306`
-- `DB_NAME=filewallball_db`, `DB_USER=filewallball`
+- `DB_NAME=filewallball_db`, `DB_USER=filewallball_user`
 
 #### 프로덕션 환경 (.env.prod)
 - `DEBUG=false`
 - `LOG_LEVEL=WARNING`
 - `ENVIRONMENT=production`
-- Docker 컨테이너 사용 (외부 DB 제거됨)
+- Docker 컨테이너 사용
 - `DB_HOST=mariadb`, `DB_PORT=13306`
-- `DB_NAME=filewallball_db`, `DB_USER=filewallball`
+- `DB_NAME=filewallball_db`, `DB_USER=filewallball_user`
 
 #### 기본 환경 (.env)
 - `DEBUG=true`
@@ -507,7 +230,7 @@ docker-compose --env-file .env.prod exec app env | grep -E "ENVIRONMENT|DEBUG|LO
 - `ENVIRONMENT=testing`
 - Docker 컨테이너 사용
 - `DB_HOST=mariadb`, `DB_PORT=13306`
-- `DB_NAME=filewallball_db`, `DB_USER=filewallball`
+- `DB_NAME=filewallball_db`, `DB_USER=filewallball_user`
 
 ### 📁 **환경별 설정 파일 구조**
 
@@ -516,7 +239,6 @@ dy_gh_filewallball/
 ├── .env.dev          # 개발 환경 설정
 ├── .env.prod         # 프로덕션 환경 설정
 ├── .env              # 기본 환경 설정 (기본값)
-├── .env.example      # 환경 변수 템플릿
 ├── docker-compose.yml           # 기본 Docker Compose 설정
 ├── docker-compose.dev.yml       # 개발 환경 오버라이드
 └── docker-compose.prod.yml      # 프로덕션 환경 오버라이드
@@ -532,20 +254,7 @@ dy_gh_filewallball/
 | **핫 리로드** | ✅ 활성화 | ❌ 비활성화 | ❌ 비활성화 |
 | **워커 프로세스** | 1개 | 4개 | 1개 |
 | **리소스 제한** | ❌ 없음 | ✅ 메모리 1GB, CPU 1.0 | ❌ 없음 |
-| **포트 노출** | ✅ 18000, 13306, 16379, 18080 | ✅ 18000, 13306 | ✅ 18000, 13306 |
-
-### 📊 환경별 성능 설정
-
-#### 개발 환경
-- 핫 리로드 활성화 (`--reload`)
-- 리소스 제한 없음
-- 디버그 모드 활성화
-
-#### 프로덕션 환경
-- 4개 워커 프로세스 (`--workers 4`)
-- 메모리 제한: 1GB
-- CPU 제한: 1.0 코어
-- 자동 재시작 (`restart: always`)
+| **포트 노출** | ✅ 18000, 13306 | ✅ 18000, 13306 | ✅ 18000, 13306 |
 
 ### ✅ **빠른 시작 체크리스트**
 
@@ -584,89 +293,37 @@ dy_gh_filewallball/
 ### 📋 시스템 요구사항
 
 - **운영체제**: Linux, macOS, Windows (Windows는 WSL2 권장)
-- **Python**: 3.11 이상
 - **Docker**: 20.10 이상
 - **Docker Compose**: 2.0 이상
-- **메모리**: 최소 4GB RAM
-- **디스크 공간**: 최소 2GB 여유 공간
+- **메모리**: 최소 2GB RAM
+- **디스크 공간**: 최소 1GB 여유 공간
 
 ### 🚀 빠른 설치
 
 #### 방법 1: 자동 설치 스크립트 (권장)
 ```bash
-# 저장소 클론
-git clone <repository-url>
-cd fileWallBall
-
-# 자동 설치 (uv 사용)
-./install.sh uv
-
-# 또는 pip 사용
-./install.sh pip
-
-# 또는 Docker 사용
-./install.sh docker
+# Ubuntu 환경에서 Production 환경 자동 설치
+curl -fsSL https://raw.githubusercontent.com/pathcosmos/dy_gh_filewallball/main/scripts/ubuntu-production-installer.sh | bash
 ```
 
 #### 방법 2: 수동 설치
 
-##### 2.1 uv를 사용한 설치 (권장)
+##### 2.1 Docker를 사용한 설치 (권장)
 ```bash
-# 1. uv 설치
-curl -LsSf https://astral.sh/uv/install.sh | sh
-source ~/.bashrc  # 또는 터미널 재시작
+# 1. Docker 및 Docker Compose 설치 확인
+docker --version
+docker-compose --version
 
 # 2. 저장소 클론
-git clone <repository-url>
-cd fileWallBall
-
-# 3. 의존성 설치
-uv sync --dev
-
-# 4. 환경 설정
-cp env.example .env
-# .env 파일 편집
-
-# 5. 개발 서버 실행
-./scripts/dev.sh run
-```
-
-##### 2.2 pip를 사용한 설치
-```bash
-# 1. Python 3.11+ 설치 확인
-python --version
-
-# 2. 저장소 클론
-git clone <repository-url>
-cd fileWallBall
-
-# 3. 의존성 설치
-pip install -r requirements.txt
-pip install -r requirements-dev.txt
-
-# 4. 환경 설정
-cp env.example .env
-# .env 파일 편집
-
-# 5. 개발 서버 실행
-uvicorn app.main:app --host 0.0.0.0 --port 18000 --reload
-```
-
-##### 2.3 setup.py를 사용한 설치
-```bash
-# 1. 저장소 클론
-git clone <repository-url>
-cd fileWallBall
-
-# 2. 개발 모드로 설치
-pip install -e .[dev]
+git clone https://github.com/pathcosmos/dy_gh_filewallball.git
+cd dy_gh_filewallball
 
 # 3. 환경 설정
-cp env.example .env
+cp .env.example .env
 # .env 파일 편집
 
 # 4. 개발 서버 실행
-filewallball  # 콘솔 스크립트로 실행
+docker-compose --env-file .env.dev up -d
 ```
 
 ### 🔧 상세 설정
@@ -675,7 +332,7 @@ filewallball  # 콘솔 스크립트로 실행
 
 1. **환경 변수 템플릿 복사**
    ```bash
-   cp env.example .env
+   cp .env.example .env
    ```
 
 2. **환경 변수 구성**
@@ -683,26 +340,20 @@ filewallball  # 콘솔 스크립트로 실행
    ```bash
    # 애플리케이션 설정
    APP_NAME="FileWallBall API"
-   APP_VERSION="1.0.0"
+   APP_VERSION="2.0.0"
    DEBUG=true
    ENVIRONMENT="development"
 
    # 서버 설정
-HOST="0.0.0.0"
-PORT=18000
+   HOST="0.0.0.0"
+   APP_PORT=18000
 
-# 데이터베이스 설정 (개발용)
-DB_HOST="localhost"
-DB_PORT=13306
-   DB_NAME="filewallball_dev"
-   DB_USER=""
-   DB_PASSWORD=""
-
-   # Redis 설정 (개발용)
-REDIS_HOST="localhost"
-REDIS_PORT=16379
-   REDIS_PASSWORD=""
-   REDIS_DB=0
+   # 데이터베이스 설정
+   DB_HOST="mariadb"
+   DB_PORT=13306
+   DB_NAME="filewallball_db"
+   DB_USER="filewallball_user"
+   DB_PASSWORD="your_password"
 
    # 파일 저장소 설정
    UPLOAD_DIR="./uploads"
@@ -717,14 +368,14 @@ REDIS_PORT=16379
 #### 데이터베이스 설정
 
 ##### MariaDB 설정
-프로젝트는 외부 MariaDB 서버를 사용합니다.
+프로젝트는 Docker 컨테이너 내부의 MariaDB를 사용합니다.
 
 ```bash
 # 환경 변수 설정
-DB_HOST="localhost"  # 로컬 Docker
-DB_PORT=13306
-DB_NAME="filewallball_dev"  # 또는 filewallball_db
-DB_USER="filewallball"
+DB_HOST="mariadb"  # Docker 컨테이너 이름
+DB_PORT=13306      # 호스트 포트
+DB_NAME="filewallball_db"
+DB_USER="filewallball_user"
 DB_PASSWORD="your_password"
 ```
 
@@ -743,7 +394,7 @@ chmod 755 uploads
 FileWallBall은 호스트 OS 경로와 컨테이너 내부 경로를 유연하게 매핑할 수 있습니다.
 
 ```bash
-# 호스트 OS 경로 (Docker/K8s에서 볼륨 마운트용)
+# 호스트 OS 경로 (Docker에서 볼륨 마운트용)
 HOST_UPLOAD_DIR=./uploads
 
 # 컨테이너 내부 경로
@@ -770,94 +421,9 @@ STORAGE_UUID_DEPTH=2
 - **개발 환경**: `STORAGE_STRUCTURE=uuid` (파일 분산 저장)
 - **프로덕션 환경**: `STORAGE_STRUCTURE=date` (날짜별 정리)
 
-자세한 설정 방법은 [파일 저장소 경로 매핑 가이드](docs/file-storage-path-mapping-guide.md)를 참조하세요.
+자세한 설정 방법은 [환경 설정 가이드](docs/ENVIRONMENT_CONFIGURATION.md)를 참조하세요.
 
-### ☸️ Kubernetes 배포 (선택사항)
-
-#### MicroK8s 환경
-```bash
-# 1. MicroK8s 배포 스크립트 실행
-./scripts/deploy.sh
-
-# 2. 배포 상태 확인
-kubectl get pods -n filewallball
-kubectl get svc -n filewallball
-```
-
-#### 수동 Kubernetes 배포
-```bash
-# 1. 네임스페이스 생성
-kubectl apply -f k8s/namespace.yaml
-
-# 2. ConfigMap 및 Secret 배포
-kubectl apply -f k8s/configmap.yaml
-kubectl apply -f k8s/02-configmap-secret.yaml
-
-# 3. 데이터베이스 배포
-kubectl apply -f k8s/mariadb-deployment.yaml
-kubectl apply -f k8s/redis-deployment.yaml
-
-# 4. 애플리케이션 배포
-kubectl apply -f k8s/03-deployment-service.yaml
-
-# 5. Ingress 배포
-kubectl apply -f k8s/ingress.yaml
-```
-
-## 🧪 개발 도구
-
-### 개발 스크립트 사용법
-```bash
-# 의존성 설치
-./scripts/dev.sh install
-
-# 개발 의존성 설치
-./scripts/dev.sh install-dev
-
-# 애플리케이션 실행
-./scripts/dev.sh run
-
-# 테스트 실행
-./scripts/dev.sh test
-
-# 테스트 (커버리지 포함)
-./scripts/dev.sh test-cov
-
-# 코드 포맷팅
-./scripts/dev.sh format
-
-# 린팅
-./scripts/dev.sh lint
-
-# 캐시 정리
-./scripts/dev.sh clean
-
-# 도움말
-./scripts/dev.sh help
-```
-
-### uv 명령어 직접 사용
-```bash
-# 의존성 설치
-uv sync
-
-# 개발 의존성 포함 설치
-uv sync --dev
-
-# 애플리케이션 실행
-uv run uvicorn app.main:app --host 0.0.0.0 --port 18000 --reload
-
-# 테스트 실행
-uv run pytest tests/ -v
-
-# 코드 포맷팅
-uv run black app/ tests/
-uv run isort app/ tests/
-
-# 린팅
-uv run flake8 app/ tests/
-uv run mypy app/
-```
+---
 
 ## 📖 API 사용법
 
@@ -904,321 +470,14 @@ curl "http://localhost:18000/files?limit=10&offset=0"
 curl -X DELETE "http://localhost:18000/files/{file_id}"
 ```
 
-## 🧪 테스트 및 개발
-
-### 🚀 빠른 테스트 시작
-
-#### 컨테이너 기반 테스트 (권장)
+### 프로젝트 키 생성
 ```bash
-# 전체 테스트 실행
-./scripts/run-container-tests.sh
-
-# 특정 테스트 타입만 실행
-./scripts/run-container-tests.sh unit        # Unit 테스트만
-./scripts/run-container-tests.sh integration # Integration 테스트만
-./scripts/run-container-tests.sh api         # API 테스트만
-./scripts/run-container-tests.sh pytest      # 전체 pytest 실행
+curl -X POST "http://localhost:18000/keygen" \
+  -H "Content-Type: application/json" \
+  -d '{"project_name": "my_project"}'
 ```
 
-#### 로컬 테스트
-```bash
-# 빠른 테스트 (기본 기능만)
-./scripts/test-quick.sh
-
-# 전체 워크플로우 테스트
-./scripts/test-full-workflow.sh
-
-# API 테스트
-./scripts/test-api.sh
-```
-
-### 📋 테스트 종류
-
-#### 1. 컨테이너 기반 테스트 (권장)
-**장점:**
-- 전체 서비스 의존성 포함 (MariaDB, Redis)
-- 격리된 테스트 환경
-- 프로덕션과 유사한 환경
-- 자동 정리 및 결과 수집
-
-#### 2. 로컬 테스트
-- **빠른 테스트**: 기본적인 API 기능만 빠르게 확인 (1-2분)
-- **전체 워크플로우 테스트**: 파일 업로드부터 삭제까지 전체 과정 (3-5분)
-- **API 테스트**: 15개의 API 엔드포인트 테스트 (2-3분)
-
-### 🐍 Python 테스트
-
-#### 로컬 Python 테스트
-```bash
-# uv 사용 (권장)
-uv run pytest tests/ -v
-uv run pytest tests/unit/ -v
-uv run pytest tests/integration/ -v
-
-# pip 사용
-pip install -r requirements.txt
-pytest tests/ -v
-
-# 커버리지와 함께
-pytest tests/ --cov=app --cov-report=html
-```
-
-#### 특정 테스트 실행
-```bash
-# 특정 테스트 파일
-pytest tests/unit/test_file_service.py -v
-
-# 특정 테스트 함수
-pytest tests/unit/test_file_service.py::test_upload_file -v
-
-# 마커 사용
-pytest -m "slow" -v
-pytest -m "not slow" -v
-```
-
-### 📊 테스트 결과
-
-#### 결과 파일 위치
-```
-test_results/
-├── htmlcov/                    # HTML 커버리지 리포트
-│   └── index.html
-├── junit.xml                   # JUnit XML 리포트
-├── service_logs.txt            # 서비스 로그
-├── api_test_summary.txt        # API 테스트 요약
-├── workflow_test_summary.txt   # 워크플로우 테스트 요약
-├── quick_test_summary.txt      # 빠른 테스트 요약
-└── *.log                       # 개별 테스트 로그
-```
-
-#### 결과 확인
-```bash
-# HTML 커버리지 리포트 보기
-open test_results/htmlcov/index.html
-
-# 테스트 요약 확인
-cat test_results/api_test_summary.txt
-cat test_results/workflow_test_summary.txt
-cat test_results/quick_test_summary.txt
-
-# 서비스 로그 확인
-tail -f test_results/service_logs.txt
-```
-
-### 🔧 Makefile 사용법
-```bash
-# 테스트 관련 명령어
-make -f Makefile.test help          # 도움말
-make -f Makefile.test build-test    # 테스트 컨테이너 빌드
-make -f Makefile.test run-test      # 전체 테스트 실행
-make -f Makefile.test run-quick-test # 빠른 테스트 실행
-make -f Makefile.test run-full-test # 전체 워크플로우 테스트
-make -f Makefile.test clean-test    # 테스트 정리
-make -f Makefile.test logs-test     # 테스트 로그 확인
-```
-
-### 🚨 문제 해결
-
-#### 일반적인 문제
-1. **API 서비스 연결 실패**
-   ```bash
-   docker-compose -f docker-compose.test.yml ps
-   docker-compose -f docker-compose.test.yml logs filewallball-test-app
-   ```
-
-2. **데이터베이스 연결 실패**
-   ```bash
-   docker-compose -f docker-compose.test.yml logs mariadb-test
-   ```
-
-3. **Redis 연결 실패**
-   ```bash
-   docker-compose -f docker-compose.test.yml logs redis-test
-   ```
-
-#### 테스트 환경 정리
-```bash
-# 완전 정리
-docker-compose -f docker-compose.test.yml down -v --remove-orphans
-docker system prune -f
-rm -rf test_results test_uploads
-
-# 부분 정리
-make -f Makefile.test clean-test
-```
-
-### 📈 성능 테스트
-```bash
-# 성능 테스트 실행
-python scripts/performance_test.py
-
-# Redis 성능 테스트
-python scripts/redis-performance-test.py
-
-# 데이터베이스 성능 테스트
-python scripts/test_database_performance.py
-```
-
-### 🔍 모니터링
-```bash
-# 실시간 로그 확인
-docker-compose -f docker-compose.test.yml logs -f
-
-# 메트릭스 확인
-curl http://localhost:18000/metrics
-
-# 상세 메트릭스
-curl http://localhost:18000/api/v1/metrics/detailed
-```
-
-### 📝 테스트 작성 가이드
-
-#### 새로운 테스트 추가
-1. **Unit 테스트**: `tests/unit/`
-2. **Integration 테스트**: `tests/integration/`
-3. **E2E 테스트**: `tests/e2e/`
-
-#### 테스트 구조
-```python
-import pytest
-from app.services.file_service import FileService
-
-class TestFileService:
-    @pytest.fixture
-    def file_service(self):
-        return FileService()
-    
-    def test_upload_file(self, file_service):
-        # 테스트 로직
-        pass
-    
-    @pytest.mark.integration
-    def test_file_workflow(self, file_service):
-        # 통합 테스트 로직
-        pass
-```
-
-#### 테스트 마커
-```python
-@pytest.mark.slow      # 느린 테스트
-@pytest.mark.integration  # 통합 테스트
-@pytest.mark.api       # API 테스트
-@pytest.mark.unit      # 단위 테스트
-```
-
-### 🎯 CI/CD 통합
-
-#### GitHub Actions 예시
-```yaml
-name: Tests
-on: [push, pull_request]
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: Run container tests
-        run: ./scripts/run-container-tests.sh
-      - name: Upload test results
-        uses: actions/upload-artifact@v3
-        with:
-          name: test-results
-          path: test_results/
-```
-
-### 📚 추가 리소스
-- [TEST_README.md](./TEST_README.md) - 상세 테스트 가이드
-- [CLAUDE.md](./CLAUDE.md) - 개발 가이드
-- [docs/testing-framework-guide.md](./docs/testing-framework-guide.md) - 테스트 프레임워크 상세 가이드
-
-### 코드 품질 도구
-
-#### Pre-commit Hooks
-```bash
-# pre-commit 훅 설치
-uv run pre-commit install
-
-# 모든 파일에 수동 실행
-uv run pre-commit run --all-files
-
-# 특정 훅 실행
-uv run pre-commit run black --all-files
-```
-
-#### 수동 코드 품질 검사
-```bash
-# 코드 포맷팅
-./scripts/dev.sh format
-make format
-
-# 린팅
-./scripts/dev.sh lint
-make lint
-
-# 타입 체킹
-uv run mypy app/
-
-# 보안 검사
-uv run bandit -r app/
-```
-
-### 개발 워크플로우
-
-#### 일일 개발 명령어
-```bash
-# 개발 서버 시작
-./scripts/dev.sh run
-make run
-
-# 커밋 전 테스트 실행
-./scripts/dev.sh test
-make test
-
-# 커밋 전 코드 포맷팅
-./scripts/dev.sh format
-make format
-
-# 코드 품질 확인
-./scripts/dev.sh lint
-make lint
-
-# 캐시 파일 정리
-./scripts/dev.sh clean
-make clean
-```
-
-#### Git 워크플로우
-```bash
-# 기능 브랜치 생성
-git checkout -b feature/your-feature-name
-
-# 변경사항 커밋
-git add .
-git commit -m "feat: add new feature"
-
-# 원격 저장소에 푸시
-git push origin feature/your-feature-name
-
-# Pull Request 생성
-# GitHub에서 PR 생성
-```
-
-## 📊 모니터링
-
-### 메트릭 확인
-```bash
-curl "http://localhost:18000/metrics"
-```
-
-### 헬스체크
-```bash
-curl "http://localhost:18000/health"
-```
-
-### HPA 상태 확인
-```bash
-kubectl get hpa -n filewallball
-```
+---
 
 ## 🚀 프로덕션 환경 운영 가이드
 
@@ -1226,7 +485,7 @@ kubectl get hpa -n filewallball
 
 #### 배포 전 확인사항
 - [ ] `.env.prod` 파일 설정 완료
-- [ ] 외부 데이터베이스 연결 확인
+- [ ] 데이터베이스 연결 확인
 - [ ] 보안 환경 변수 설정
 - [ ] 리소스 제한 설정 확인
 
@@ -1321,103 +580,29 @@ docker-compose --env-file .env.prod config | grep -A 10 "deploy:"
 ```bash
 # 프로덕션 환경에서 워커 수 조정
 # docker-compose.prod.yml 수정
-command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "18000", "--workers", "8"]
+command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "8"]
 
 # 설정 적용
 docker-compose --env-file .env.prod up -d --force-recreate app
 ```
 
-#### 캐시 최적화
-```bash
-# Redis 캐시 상태 확인
-docker-compose --env-file .env.prod exec redis redis-cli info memory
-
-# 캐시 통계 확인
-docker-compose --env-file .env.prod exec redis redis-cli info stats
-```
-
-### 🔒 보안 강화
-
-#### 환경 변수 보안
-```bash
-# 민감한 정보 확인
-docker-compose --env-file .env.prod exec app env | grep -E "PASSWORD|SECRET|KEY"
-
-# 환경 변수 파일 권한 설정
-chmod 600 .env.prod
-```
-
-#### 컨테이너 보안
-```bash
-# 보안 설정 확인
-docker-compose --env-file .env.prod config | grep -A 5 "security_opt:"
-
-# 사용자 권한 확인
-docker-compose --env-file .env.prod exec app whoami
-```
-
-## 🔧 설정
-
-### 환경 변수
-- `BASE_URL`: API 기본 URL
-- `REDIS_HOST`: Redis 서버 호스트
-- `REDIS_PORT`: Redis 서버 포트
-
-### Kubernetes 설정
-- **네임스페이스**: `filewallball`
-- **Replicas**: 2-10 (HPA)
-- **Storage**: 10Gi PersistentVolume
-- **CPU Limit**: 200m
-- **Memory Limit**: 256Mi
+---
 
 ## 🚨 문제 해결
 
 ### 일반적인 문제들
 
-#### 1. Python 버전 문제
-**문제**: 잘못된 Python 버전
+#### 1. Docker 버전 문제
+**문제**: 잘못된 Docker 버전
 ```bash
-# Python 버전 확인
-python3 --version
+# Docker 버전 확인
+docker --version
 
 # 잘못된 버전인 경우 올바른 버전 설치
-sudo apt install python3.11  # Ubuntu/Debian
-brew install python@3.11     # macOS
+sudo apt install docker.io docker-compose  # Ubuntu/Debian
 ```
 
-#### 2. uv 설치 문제
-**문제**: uv 명령어를 찾을 수 없음
-```bash
-# uv 재설치
-curl -LsSf https://astral.sh/uv/install.sh | sh
-source ~/.bashrc
-
-# 또는 PATH에 수동 추가
-export PATH="$HOME/.cargo/bin:$PATH"
-```
-
-#### 3. 의존성 설치 문제
-**문제**: 패키지 설치 실패
-```bash
-# uv 캐시 정리
-uv cache clean
-
-# 의존성 재설치
-uv sync --reinstall
-```
-
-#### 4. 데이터베이스 연결 문제
-**문제**: 데이터베이스에 연결할 수 없음
-```bash
-# 데이터베이스 실행 상태 확인
-sudo systemctl status mysql  # MySQL
-sudo systemctl status redis  # Redis
-
-# .env 파일의 연결 설정 확인
-cat .env | grep DB_
-```
-
-#### 5. 포트 이미 사용 중
+#### 2. 포트 이미 사용 중
 **문제**: 포트 18000이 이미 사용 중
 ```bash
 # 포트 18000을 사용하는 프로세스 찾기
@@ -1426,21 +611,20 @@ lsof -i :18000
 # 프로세스 종료
 kill -9 <PID>
 
-# 또는 다른 포트 사용
-uv run uvicorn app.main:app --port 18001
+# 또는 다른 포트 사용 (.env 파일에서 APP_PORT 수정)
 ```
 
-#### 6. 권한 문제
+#### 3. 권한 문제
 **문제**: 권한 거부 오류
 ```bash
 # 업로드 디렉토리 권한 수정
 chmod 755 uploads
 
 # 스크립트 권한 수정
-chmod +x scripts/*.py
+chmod +x scripts/*.sh
 ```
 
-#### 7. 파일 저장소 경로 매핑 문제
+#### 4. 파일 저장소 경로 매핑 문제
 **문제**: 파일 업로드 경로 매핑 오류
 ```bash
 # 설정 확인
@@ -1453,67 +637,17 @@ echo $STORAGE_STRUCTURE
 ls -la $HOST_UPLOAD_DIR
 
 # Docker 볼륨 마운트 확인
-docker inspect filewallball | grep -A 10 "Mounts"
-
-# Kubernetes PVC 상태 확인
-kubectl get pvc -n filewallball
-kubectl describe pvc filewallball-storage-pvc -n filewallball
+docker inspect filewallball-app | grep -A 10 "Mounts"
 ```
 
-#### 8. 저장소 구조 문제
-**문제**: 파일 저장 구조 오류
+#### 5. 데이터베이스 연결 문제
+**문제**: 데이터베이스에 연결할 수 없음
 ```bash
-# 현재 저장소 구조 확인
-find uploads/ -type f | head -10
+# 데이터베이스 실행 상태 확인
+docker-compose --env-file .env.dev ps mariadb
 
-# 저장소 통계 확인
-curl -X GET "http://localhost:18000/api/v1/storage/stats" \
-  -H "Authorization: Bearer YOUR_TOKEN"
-
-# 설정 재적용
-docker-compose down
-docker-compose up -d
-```
-
-### Kubernetes 문제
-
-#### Pod가 시작되지 않는 경우
-```bash
-kubectl describe pod -n filewallball <pod-name>
-kubectl logs -n filewallball <pod-name>
-```
-
-#### Redis 연결 문제
-```bash
-kubectl logs -n filewallball deployment/redis-deployment
-```
-
-#### 스토리지 문제
-```bash
-kubectl get pvc -n filewallball
-kubectl describe pvc -n filewallball filewallball-pvc
-```
-
-### 성능 문제
-
-#### 1. 느린 테스트 실행
-```bash
-# 병렬로 테스트 실행
-uv run pytest -n auto
-
-# 단위 테스트만 실행
-uv run pytest tests/unit/ -v
-```
-
-#### 2. 메모리 문제
-```bash
-# 캐시 정리
-make clean
-
-# uv 캐시 정리
-uv cache clean
-
-# 개발 서버 재시작
+# .env 파일의 연결 설정 확인
+cat .env | grep DB_
 ```
 
 ### 디버깅
@@ -1527,9 +661,6 @@ LOG_LEVEL=DEBUG
 
 #### 2. 애플리케이션 로그 확인
 ```bash
-# 개발 서버 로그
-uv run uvicorn app.main:app --log-level debug
-
 # Docker 로그
 docker-compose logs -f app
 ```
@@ -1537,61 +668,39 @@ docker-compose logs -f app
 #### 3. 데이터베이스 디버깅
 ```bash
 # 데이터베이스 연결 확인
-uv run python -c "from app.core.config import get_config; print(get_config().database_url)"
+docker-compose exec app python -c "from app.core.config import get_config; print(get_config().database_url)"
 
 # 데이터베이스 연결 테스트
-uv run python scripts/test_config.py
+docker-compose exec mariadb mysql -u root -p -e "SHOW DATABASES;"
 ```
 
 ### 로그 확인
 
 ```bash
 # 애플리케이션 로그
-tail -f logs/app.log
+docker-compose logs -f app
 
-# Docker 로그
-docker logs -f filewallball
+# 데이터베이스 로그
+docker-compose logs -f mariadb
 
-# Kubernetes 로그
-kubectl logs -f deployment/filewallball-deployment -n filewallball
+# 전체 서비스 로그
+docker-compose logs -f
 ```
-
-## 📈 성능 최적화
-
-### 자동 스케일링 설정
-- **CPU 임계값**: 70%
-- **메모리 임계값**: 80%
-- **최소 Replicas**: 2
-- **최대 Replicas**: 10
-
-### 캐시 설정
-- Redis TTL: 24시간
-- 파일 메타데이터 캐싱
-- 해시값 계산 (백그라운드)
-
-## 🔒 보안 고려사항
-
-- 파일 업로드 크기 제한
-- 허용된 파일 타입 검증
-- CORS 설정
-- 적절한 에러 처리
-- IP 기반 인증
-- RBAC 권한 관리
-- 레이트 리미팅
 
 ---
 
-# 📚 문서 가이드
+## 📚 문서 가이드
 
 FileWallBall 프로젝트의 모든 문서를 체계적으로 정리한 가이드입니다. 각 문서는 특정 기능이나 영역에 대한 상세한 설명을 제공합니다.
 
 ## 🗂️ 문서 구조
 
-### 📋 프로젝트 개요 및 설정
-- **[프로젝트 개요](docs/project-overview.md)** - FileWallBall 프로젝트의 전체적인 구조와 아키텍처
-- **[파일 저장소 경로 매핑 가이드](docs/file-storage-path-mapping-guide.md)** - 호스트 OS와 컨테이너 경로 매핑 설정
-- **[배포 및 운영 가이드](docs/deployment-operations-guide.md)** - 프로덕션 배포 및 운영 관리
+### �� 프로젝트 개요 및 설정
 - **[데이터베이스 설정 가이드](docs/database-setup-guide.md)** - MariaDB 설정 및 원격 접속 구성
+- **[백업 및 복구 가이드](docs/backup-recovery-guide.md)** - 데이터 백업 및 복구 시스템
+- **[프로덕션 배포 가이드](docs/PRODUCTION_DEPLOYMENT_GUIDE.md)** - 프로덕션 환경 배포 방법
+- **[환경 설정 가이드](docs/ENVIRONMENT_CONFIGURATION.md)** - 개발/프로덕션 환경 설정
+- **[배포 체크리스트](docs/DEPLOYMENT_CHECKLIST.md)** - 배포 전후 확인사항
 
 ### 🌍 프로그래밍 언어별 API 사용법 가이드
 - **[언어별 가이드 개요](docs/language-guides/README.md)** - 모든 프로그래밍 언어 가이드의 공통 템플릿 및 사용법
@@ -1603,123 +712,105 @@ FileWallBall 프로젝트의 모든 문서를 체계적으로 정리한 가이�
 - **[통합 예제 및 최종 검토](docs/language-guides/integration-examples.md)** - 각 언어별 완전한 예제 프로젝트 구조 및 품질 검증 결과
 
 ### 🔧 핵심 기능 문서
-- **[API 엔드포인트 가이드](docs/api-endpoints-guide.md)** - 모든 API 엔드포인트의 사용법과 응답 형식
-- **[Swagger API 문서화 가이드](docs/swagger-api-documentation-guide.md)** - Swagger UI 및 API 문서화 시스템
-- **[서비스 아키텍처 가이드](docs/services-architecture-guide.md)** - 모든 서비스의 구조와 기능 설명
+- **[테스팅 가이드](docs/TESTING_GUIDE.md)** - pytest 기반 테스팅 시스템 및 테스트 실행 방법
+- **[테스트 결과 리포트](docs/TEST_RESULTS_REPORT.md)** - 테스트 실행 결과 및 분석
+- **[키 생성 엔드포인트 요약](docs/KEYGEN_ENDPOINT_SUMMARY.md)** - 프로젝트 키 생성 API 상세 설명
+- **[키 생성 테스트 리포트](docs/KEYGEN_TEST_REPORT.md)** - 키 생성 기능 테스트 결과
 
 ### 🛡️ 보안 및 인증
-- **[보안 및 인증 가이드](docs/security-authentication-guide.md)** - 보안 아키텍처, 인증 시스템, 권한 관리
-- **[파일 검증 및 처리 가이드](docs/file-validation-processing-guide.md)** - 파일 업로드 검증 및 처리 시스템
+- **[보안 강화 요약](docs/SECURITY_ENHANCEMENT_SUMMARY.md)** - 보안 기능 및 인증 시스템 개선사항
+- **[인프라 체크리스트](docs/INFRASTRUCTURE_CHECKLIST.md)** - 보안 및 인프라 설정 확인사항
 
 ### 📊 모니터링 및 성능
-- **[모니터링 및 메트릭 가이드](docs/monitoring-metrics-guide.md)** - Prometheus 메트릭, 로깅, 성능 모니터링
-- **[성능 최적화 가이드](docs/performance-optimization-guide.md)** - 성능 튜닝 및 최적화 방법
-- **[성능 최적화](docs/performance-optimization.md)** - 성능 최적화 전략 및 구현
-
-### 🗄️ 데이터 관리
-- **[Redis 캐싱 정책](docs/redis-caching-policy.md)** - Redis 캐싱 시스템 및 정책
-- **[Redis 클라이언트 가이드](docs/redis-client-guide.md)** - Redis 클라이언트 사용법
-- **[Redis 모니터링 가이드](docs/redis-monitoring-guide.md)** - Redis 모니터링 및 관리
-- **[ACID 트랜잭션](docs/acid-transactions.md)** - 데이터베이스 트랜잭션 관리
-- **[데이터베이스 헬퍼 사용법](docs/database_helpers_usage.md)** - 데이터베이스 유틸리티 사용법
+- **[MariaDB 설정](docs/MARIADB_SETUP.md)** - MariaDB 데이터베이스 설정 및 관리
+- **[데이터베이스 연결 상태](docs/DB_CONNECTION_STATUS.md)** - 데이터베이스 연결 상태 확인 및 문제 해결
 
 ### 🔄 백업 및 복구
-- **[백업 및 복구 가이드](docs/backup-recovery.md)** - 데이터 백업 및 복구 시스템
-- **[에러 처리 및 복구 가이드](docs/error-handling-recovery-guide.md)** - 에러 처리 및 장애 복구 시스템
+- **[백업 및 복구 가이드](docs/backup-recovery-guide.md)** - 데이터 백업 및 복구 시스템
+- **[SQLite 정리 리포트](docs/SQLITE_CLEANUP_REPORT.md)** - SQLite에서 MariaDB로의 마이그레이션 과정
 
 ### 🧪 테스팅
-- **[테스팅 프레임워크 가이드](docs/testing-framework-guide.md)** - pytest 기반 테스팅 시스템
+- **[테스팅 가이드](docs/TESTING_GUIDE.md)** - pytest 기반 테스팅 시스템
+- **[테스트 결과 리포트](docs/TEST_RESULTS_REPORT.md)** - 테스트 실행 결과 및 분석
 
-### 📝 로깅 및 관리
-- **[로깅 가이드](docs/logging-guide.md)** - 로깅 시스템 및 설정
+### 📝 개발 및 문서화
+- **[Claude 개발 가이드](docs/CLAUDE.md)** - Claude AI를 활용한 개발 가이드
+- **[문서 업데이트 요약](docs/DOCUMENTATION_UPDATE_SUMMARY.md)** - 문서 업데이트 내역 및 변경사항
+- **[V1 정리 요약](docs/V1_CLEANUP_SUMMARY.md)** - V1 버전 정리 및 V2 마이그레이션 과정
 
 ## 🎯 문서별 주요 내용
 
 ### 프로젝트 개요 및 설정
 | 문서 | 주요 내용 | 대상 독자 |
 |------|-----------|-----------|
-| [프로젝트 개요](docs/project-overview.md) | 전체 아키텍처, 구성요소, 기술 스택 | 모든 개발자 |
-| [파일 저장소 경로 매핑 가이드](docs/file-storage-path-mapping-guide.md) | 호스트 OS와 컨테이너 경로 매핑, 저장소 설정 | 개발자, DevOps |
-| [배포 및 운영 가이드](docs/deployment-operations-guide.md) | 프로덕션 배포, 운영 관리 | DevOps, 운영팀 |
+| [데이터베이스 설정 가이드](docs/database-setup-guide.md) | MariaDB 설정, 원격 접속 구성, 사용자 관리 | 개발자, DevOps |
+| [백업 및 복구 가이드](docs/backup-recovery-guide.md) | 데이터 백업, 복구 절차, 자동화 | DevOps, 운영팀 |
+| [프로덕션 배포 가이드](docs/PRODUCTION_DEPLOYMENT_GUIDE.md) | 프로덕션 환경 배포, 설정, 검증 | DevOps, 운영팀 |
+| [환경 설정 가이드](docs/ENVIRONMENT_CONFIGURATION.md) | 개발/프로덕션 환경 설정, 환경 변수 관리 | 개발자, DevOps |
+| [배포 체크리스트](docs/DEPLOYMENT_CHECKLIST.md) | 배포 전후 확인사항, 체크리스트 | DevOps, 운영팀 |
 
 ### 핵심 기능
 | 문서 | 주요 내용 | 대상 독자 |
 |------|-----------|-----------|
-| [API 엔드포인트 가이드](docs/api-endpoints-guide.md) | 모든 API 엔드포인트, 사용 예제 | API 사용자, 개발자 |
-| [Swagger API 문서화](docs/swagger-api-documentation-guide.md) | Swagger UI, OpenAPI 스키마 | API 개발자 |
-| [서비스 아키텍처 가이드](docs/services-architecture-guide.md) | 서비스 구조, 의존성, 확장성 | 백엔드 개발자 |
+| [테스팅 가이드](docs/TESTING_GUIDE.md) | pytest 테스팅, 테스트 실행, 결과 분석 | QA, 개발자 |
+| [키 생성 엔드포인트](docs/KEYGEN_ENDPOINT_SUMMARY.md) | 프로젝트 키 생성 API, 사용법, 응답 형식 | API 사용자, 개발자 |
+| [키 생성 테스트](docs/KEYGEN_TEST_REPORT.md) | 키 생성 기능 테스트 결과, 검증 과정 | QA, 개발자 |
 
 ### 보안 및 인증
 | 문서 | 주요 내용 | 대상 독자 |
 |------|-----------|-----------|
-| [보안 및 인증 가이드](docs/security-authentication-guide.md) | 보안 아키텍처, RBAC, IP 인증 | 보안팀, 개발자 |
-| [파일 검증 및 처리](docs/file-validation-processing-guide.md) | 파일 검증, 바이러스 스캔 | 개발자, 보안팀 |
+| [보안 강화 요약](docs/SECURITY_ENHANCEMENT_SUMMARY.md) | 보안 기능, 인증 시스템, 권한 관리 | 보안팀, 개발자 |
+| [인프라 체크리스트](docs/INFRASTRUCTURE_CHECKLIST.md) | 보안 설정, 인프라 구성 확인사항 | DevOps, 보안팀 |
 
 ### 모니터링 및 성능
 | 문서 | 주요 내용 | 대상 독자 |
 |------|-----------|-----------|
-| [모니터링 및 메트릭](docs/monitoring-metrics-guide.md) | Prometheus, Grafana, 알림 | DevOps, 운영팀 |
-| [성능 최적화 가이드](docs/performance-optimization-guide.md) | 성능 튜닝, 벤치마킹 | 개발자, 성능 엔지니어 |
-| [성능 최적화](docs/performance-optimization.md) | 최적화 전략, 구현 방법 | 개발자 |
-
-### 데이터 관리
-| 문서 | 주요 내용 | 대상 독자 |
-|------|-----------|-----------|
-| [Redis 캐싱 정책](docs/redis-caching-policy.md) | 캐싱 전략, TTL 설정 | 개발자, DevOps |
-| [Redis 클라이언트 가이드](docs/redis-client-guide.md) | Redis 클라이언트 사용법 | 개발자 |
-| [Redis 모니터링 가이드](docs/redis-monitoring-guide.md) | Redis 모니터링, 성능 분석 | DevOps, 운영팀 |
-| [ACID 트랜잭션](docs/acid-transactions.md) | 트랜잭션 관리, 일관성 | 개발자, DBA |
-| [데이터베이스 헬퍼](docs/database_helpers_usage.md) | DB 유틸리티, 헬퍼 함수 | 개발자 |
+| [MariaDB 설정](docs/MARIADB_SETUP.md) | MariaDB 설정, 데이터베이스 관리 | 개발자, DBA |
+| [데이터베이스 연결 상태](docs/DB_CONNECTION_STATUS.md) | DB 연결 상태, 문제 해결, 모니터링 | 개발자, DevOps |
 
 ### 백업 및 복구
 | 문서 | 주요 내용 | 대상 독자 |
 |------|-----------|-----------|
-| [백업 및 복구 가이드](docs/backup-recovery.md) | 자동 백업, 복구 절차 | DevOps, 운영팀 |
-| [에러 처리 및 복구](docs/error-handling-recovery-guide.md) | 에러 처리, 장애 복구 | 개발자, 운영팀 |
+| [백업 및 복구 가이드](docs/backup-recovery-guide.md) | 자동 백업, 복구 절차, 시스템 관리 | DevOps, 운영팀 |
+| [SQLite 정리 리포트](docs/SQLITE_CLEANUP_REPORT.md) | 마이그레이션 과정, 데이터 이전, 정리 | 개발자, DevOps |
 
-### 테스팅
+### 개발 및 문서화
 | 문서 | 주요 내용 | 대상 독자 |
 |------|-----------|-----------|
-| [테스팅 프레임워크](docs/testing-framework-guide.md) | pytest, 통합 테스트, 성능 테스트 | QA, 개발자 |
-
-### 로깅 및 관리
-| 문서 | 주요 내용 | 대상 독자 |
-|------|-----------|-----------|
-| [로깅 가이드](docs/logging-guide.md) | 로깅 설정, 로그 분석 | 개발자, 운영팀 |
+| [Claude 개발 가이드](docs/CLAUDE.md) | AI 활용 개발, 코드 생성, 문제 해결 | 개발자 |
+| [문서 업데이트 요약](docs/DOCUMENTATION_UPDATE_SUMMARY.md) | 문서 변경사항, 업데이트 내역 | 모든 사용자 |
+| [V1 정리 요약](docs/V1_CLEANUP_SUMMARY.md) | 버전 마이그레이션, 코드 정리, 개선사항 | 개발자, 운영팀 |
 
 ## 🚀 빠른 시작 가이드
 
 ### 개발자 시작하기
 1. **설치 및 배포 섹션** - 개발 환경 설정 (위 참조)
-2. **[프로젝트 개요](docs/project-overview.md)** - 전체 구조 이해
-3. **[파일 저장소 경로 매핑 가이드](docs/file-storage-path-mapping-guide.md)** - 파일 저장소 설정
-4. **[API 엔드포인트 가이드](docs/api-endpoints-guide.md)** - API 사용법 학습
-5. **[서비스 아키텍처 가이드](docs/services-architecture-guide.md)** - 서비스 구조 파악
-6. **[프로그래밍 언어별 API 사용법 가이드](docs/language-guides/README.md)** - 선호하는 언어로 API 사용법 학습
+2. **[데이터베이스 설정 가이드](docs/database-setup-guide.md)** - 데이터베이스 설정 및 관리
+3. **[환경 설정 가이드](docs/ENVIRONMENT_CONFIGURATION.md)** - 개발/프로덕션 환경 설정
+4. **[프로덕션 배포 가이드](docs/PRODUCTION_DEPLOYMENT_GUIDE.md)** - 배포 및 운영
+5. **[프로그래밍 언어별 API 사용법 가이드](docs/language-guides/README.md)** - 선호하는 언어로 API 사용법 학습
 
 ### API 사용자 시작하기
-1. **[API 엔드포인트 가이드](docs/api-endpoints-guide.md)** - API 사용법
-2. **[Swagger API 문서화](docs/swagger-api-documentation-guide.md)** - 인터랙티브 문서
-3. **[보안 및 인증 가이드](docs/security-authentication-guide.md)** - 인증 방법
-4. **[프로그래밍 언어별 API 사용법 가이드](docs/language-guides/README.md)** - 선호하는 언어로 상세한 구현 예제 확인
+1. **[키 생성 엔드포인트](docs/KEYGEN_ENDPOINT_SUMMARY.md)** - API 키 생성 및 인증
+2. **[언어별 API 사용법 가이드](docs/language-guides/README.md)** - 선호하는 언어로 상세한 구현 예제 확인
+3. **[테스팅 가이드](docs/TESTING_GUIDE.md)** - API 테스트 및 검증
 
 ### 운영팀 시작하기
-1. **[배포 및 운영 가이드](docs/deployment-operations-guide.md)** - 배포 및 운영
-2. **[모니터링 및 메트릭 가이드](docs/monitoring-metrics-guide.md)** - 모니터링 설정
-3. **[백업 및 복구 가이드](docs/backup-recovery.md)** - 백업 및 복구
-4. **[Redis 모니터링 가이드](docs/redis-monitoring-guide.md)** - Redis 관리
+1. **[프로덕션 배포 가이드](docs/PRODUCTION_DEPLOYMENT_GUIDE.md)** - 배포 및 운영
+2. **[배포 체크리스트](docs/DEPLOYMENT_CHECKLIST.md)** - 배포 전후 확인사항
+3. **[백업 및 복구 가이드](docs/backup-recovery-guide.md)** - 백업 및 복구
+4. **[MariaDB 설정](docs/MARIADB_SETUP.md)** - 데이터베이스 관리
 
 ### 보안팀 시작하기
-1. **[보안 및 인증 가이드](docs/security-authentication-guide.md)** - 보안 아키텍처
-2. **[파일 검증 및 처리 가이드](docs/file-validation-processing-guide.md)** - 파일 보안
-3. **[에러 처리 및 복구 가이드](docs/error-handling-recovery-guide.md)** - 보안 이벤트
+1. **[보안 강화 요약](docs/SECURITY_ENHANCEMENT_SUMMARY.md)** - 보안 아키텍처
+2. **[인프라 체크리스트](docs/INFRASTRUCTURE_CHECKLIST.md)** - 보안 설정 확인
+3. **[데이터베이스 연결 상태](docs/DB_CONNECTION_STATUS.md)** - 보안 연결 상태
 
 ## 📊 문서 품질 관리
 
 ### 문서 업데이트 체크리스트
 - [ ] 코드 변경사항 반영
 - [ ] 예제 코드 검증
-- [ ] 스크린샷 및 다이어그램 업데이트
 - [ ] 링크 유효성 확인
 - [ ] 문법 및 맞춤법 검토
 - [ ] 언어별 가이드 문서 동기화 (API 변경 시)
@@ -1735,14 +826,13 @@ FileWallBall 프로젝트의 모든 문서를 체계적으로 정리한 가이�
 ### 외부 문서
 - [FastAPI 공식 문서](https://fastapi.tiangolo.com/)
 - [Redis 공식 문서](https://redis.io/documentation)
-- [Prometheus 공식 문서](https://prometheus.io/docs/)
-- [Kubernetes 공식 문서](https://kubernetes.io/docs/)
+- [MariaDB 공식 문서](https://mariadb.org/documentation/)
+- [Docker 공식 문서](https://docs.docker.com/)
 
 ### 프로젝트 리소스
-- [GitHub 저장소](https://github.com/filewallball/api)
+- [GitHub 저장소](https://github.com/pathcosmos/dy_gh_filewallball)
 - [API 문서 (Swagger UI)](http://localhost:18000/docs)
 - [API 문서 (ReDoc)](http://localhost:18000/redoc)
-- [프로젝트 위키](https://github.com/filewallball/api/wiki)
 
 ## 📚 추가 리소스
 
@@ -1750,7 +840,7 @@ FileWallBall 프로젝트의 모든 문서를 체계적으로 정리한 가이�
 - [FastAPI 공식 문서](https://fastapi.tiangolo.com/)
 - [SQLAlchemy 문서](https://docs.sqlalchemy.org/)
 - [Redis 문서](https://redis.io/documentation)
-- [uv 문서](https://docs.astral.sh/uv/)
+- [Docker Compose 문서](https://docs.docker.com/compose/)
 
 ### 도구
 - [Black 코드 포맷터](https://black.readthedocs.io/)
@@ -1761,9 +851,9 @@ FileWallBall 프로젝트의 모든 문서를 체계적으로 정리한 가이�
 
 ## 📞 지원 및 문의
 
-문의사항이 있으시면 아래 이메일로 메일을 보내주세요.
+문의사항이 있으시면 GitHub Issues를 통해 문의해주세요.
 
-**📧 이메일**: lanco.gh@gmail.com
+**🐙 GitHub Issues**: https://github.com/pathcosmos/dy_gh_filewallball/issues
 
 ## 📝 문서 기여하기
 
@@ -1786,9 +876,9 @@ FileWallBall 프로젝트의 모든 문서를 체계적으로 정리한 가이�
 
 1. Fork the repository
 2. Create a feature branch
-3. Install dependencies with `uv sync --dev`
-4. Run tests with `./scripts/dev.sh test`
-5. Format code with `./scripts/dev.sh format`
+3. Install dependencies with Docker Compose
+4. Run tests with Docker Compose
+5. Format code with development tools
 6. Commit your changes
 7. Push to the branch
 8. Create a Pull Request
@@ -1801,9 +891,9 @@ MIT License - 자유롭게 사용, 수정, 배포할 수 있는 오픈소스 라
 
 ## 📞 지원
 
-문제가 발생하거나 질문이 있으시면 이메일로 문의해주세요.
+문제가 발생하거나 질문이 있으시면 GitHub Issues를 통해 문의해주세요.
 
-**📧 이메일**: lanco.gh@gmail.com
+**🐙 GitHub Issues**: https://github.com/pathcosmos/dy_gh_filewallball/issues
 
 ---
 
