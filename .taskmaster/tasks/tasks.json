@@ -1472,11 +1472,284 @@
             "parentTaskId": 27
           }
         ]
+      },
+      {
+        "id": 28,
+        "title": "FileWallBall API 코드 구조 모듈화",
+        "description": "현재 main.py에 집중된 모든 endpoint를 3개의 주요 모듈(files.py, download.py, system.py)로 분리하여 코드 가독성과 유지보수성을 향상시킵니다.",
+        "details": "**1. 모듈 구조 설계 및 생성:**\n- `routers/` 디렉토리 생성\n- `routers/__init__.py` 파일 생성\n- `routers/files.py` - 파일 관리 관련 endpoint 모듈\n- `routers/download.py` - 파일 다운로드/뷰어 관련 endpoint 모듈  \n- `routers/system.py` - 시스템 관리 관련 endpoint 모듈\n\n**2. files.py 모듈 구현:**\n```python\nfrom fastapi import APIRouter, Depends, HTTPException\nfrom typing import List\n\nrouter = APIRouter(prefix=\"/api/v1\", tags=[\"files\"])\n\n@router.post(\"/upload\")\nasync def upload_file(...):\n    # 기존 파일 업로드 로직 이전\n\n@router.get(\"/files\", response_model=List[FileResponse])\nasync def list_files(...):\n    # 기존 파일 목록 조회 로직 이전\n\n@router.get(\"/files/{file_id}\")\nasync def get_file_info(...):\n    # 기존 파일 정보 조회 로직 이전\n\n@router.delete(\"/files/{file_id}\")\nasync def delete_file(...):\n    # 기존 파일 삭제 로직 이전\n```\n\n**3. download.py 모듈 구현:**\n```python\nrouter = APIRouter(prefix=\"/api/v1\", tags=[\"download\"])\n\n@router.get(\"/download/{file_id}\")\nasync def download_file(...):\n    # 기존 다운로드 로직 이전\n\n@router.get(\"/view/{file_id}\")\nasync def view_file(...):\n    # 기존 뷰어 로직 이전\n\n@router.get(\"/preview/{file_id}\")\nasync def preview_file(...):\n    # 기존 미리보기 로직 이전\n\n@router.get(\"/thumbnail/{file_id}\")\nasync def get_thumbnail(...):\n    # 기존 썸네일 로직 이전\n```\n\n**4. system.py 모듈 구현:**\n```python\nrouter = APIRouter(tags=[\"system\"])\n\n@router.get(\"/health\")\nasync def health_check():\n    # 기존 헬스체크 로직 이전\n\n@router.post(\"/keygen\")\nasync def generate_key(...):\n    # 기존 키 생성 로직 이전\n```\n\n**5. main.py 리팩토링:**\n```python\nfrom fastapi import FastAPI\nfrom routers import files, download, system\n\napp = FastAPI(title=\"FileWallBall API\")\n\n# 라우터 등록\napp.include_router(files.router)\napp.include_router(download.router)\napp.include_router(system.router)\n\n# 기존 미들웨어, 설정 등 유지\n```\n\n**6. 공통 의존성 및 유틸리티 분리:**\n- `dependencies.py` - 인증, 데이터베이스 연결 등 공통 의존성\n- `models.py` - Pydantic 모델 정의\n- `utils.py` - 공통 유틸리티 함수\n\n**7. 호환성 보장:**\n- 기존 API 경로 및 응답 형식 완전 유지\n- HTTP 메서드 및 상태 코드 동일하게 유지\n- 에러 처리 로직 그대로 이전",
+        "testStrategy": "**1. 모듈 분리 후 빌드 테스트:**\n- `docker-compose build` 명령으로 컨테이너 빌드 성공 확인\n- `docker-compose up -d` 명령으로 서비스 정상 시작 확인\n- 애플리케이션 로그에서 import 에러 없음 확인\n\n**2. API 호환성 테스트:**\n- 기존 테스트 스크립트 `test_workflow.sh` 실행하여 전체 워크플로우 정상 동작 확인\n- 각 모듈별 endpoint 개별 테스트:\n  - `curl -X POST /api/v1/upload` (files 모듈)\n  - `curl -X GET /api/v1/download/{file_id}` (download 모듈)  \n  - `curl -X GET /health` (system 모듈)\n- HTTP 상태 코드 및 응답 형식 기존과 동일한지 검증\n\n**3. 성능 영향 테스트:**\n- 모듈화 전후 응답 시간 비교 측정\n- `wrk` 도구로 헬스체크 endpoint 성능 테스트 (기존 959 TPS 수준 유지 확인)\n- 메모리 사용량 변화 모니터링\n\n**4. 코드 품질 검증:**\n- 각 모듈의 독립성 확인 (순환 import 없음)\n- FastAPI 자동 문서화 `/docs` 페이지 정상 생성 확인\n- 모든 endpoint가 올바른 태그로 분류되어 표시되는지 확인\n\n**5. 에러 처리 테스트:**\n- 잘못된 파일 ID, 인증 실패 등 기존 에러 시나리오 재테스트\n- 모듈별 에러 응답이 기존과 동일한지 확인",
+        "status": "done",
+        "dependencies": [
+          27,
+          22
+        ],
+        "priority": "high",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "라우터 모듈 디렉토리 및 파일 구조 생성",
+            "description": "FastAPI 라우터 모듈을 위한 `routers/` 디렉토리와 각 기능별 모듈 파일(`files.py`, `download.py`, `system.py`, `__init__.py`)을 생성합니다.",
+            "dependencies": [],
+            "details": "- `routers/` 디렉토리 생성\n- `routers/__init__.py` 파일 생성\n- `routers/files.py` 파일 생성\n- `routers/download.py` 파일 생성\n- `routers/system.py` 파일 생성",
+            "status": "done",
+            "testStrategy": "파일 시스템에서 `routers/` 디렉토리와 그 안에 명시된 파일들이 정상적으로 생성되었는지 확인합니다."
+          },
+          {
+            "id": 2,
+            "title": "`files.py` 모듈 엔드포인트 구현",
+            "description": "파일 관리 관련 엔드포인트(업로드, 목록 조회, 정보 조회, 삭제)를 `files.py` 모듈로 이전하고 구현합니다.",
+            "dependencies": [
+              "28.1"
+            ],
+            "details": "```python\nfrom fastapi import APIRouter, Depends, HTTPException\nfrom typing import List\n\nrouter = APIRouter(prefix=\"/api/v1\", tags=[\"files\"])\n\n@router.post(\"/upload\")\nasync def upload_file(...):\n    # 기존 파일 업로드 로직 이전\n\n@router.get(\"/files\", response_model=List[FileResponse])\nasync def list_files(...):\n    # 기존 파일 목록 조회 로직 이전\n\n@router.get(\"/files/{file_id}\")\nasync def get_file_info(...):\n    # 기존 파일 정보 조회 로직 이전\n\n@router.delete(\"/files/{file_id}\")\nasync def delete_file(...):\n    # 기존 파일 삭제 로직 이전\n```",
+            "status": "done",
+            "testStrategy": "`curl -X POST /api/v1/upload`, `curl -X GET /api/v1/files`, `curl -X GET /api/v1/files/{file_id}`, `curl -X DELETE /api/v1/files/{file_id}` 명령으로 각 엔드포인트가 정상적으로 동작하는지 확인합니다."
+          },
+          {
+            "id": 3,
+            "title": "`download.py` 모듈 엔드포인트 구현",
+            "description": "파일 다운로드 및 뷰어 관련 엔드포인트(다운로드, 뷰어, 미리보기, 썸네일)를 `download.py` 모듈로 이전하고 구현합니다.",
+            "dependencies": [
+              "28.1"
+            ],
+            "details": "```python\nrouter = APIRouter(prefix=\"/api/v1\", tags=[\"download\"])\n\n@router.get(\"/download/{file_id}\")\nasync def download_file(...):\n    # 기존 다운로드 로직 이전\n\n@router.get(\"/view/{file_id}\")\nasync def view_file(...):\n    # 기존 뷰어 로직 이전\n\n@router.get(\"/preview/{file_id}\")\nasync def preview_file(...):\n    # 기존 미리보기 로직 이전\n\n@router.get(\"/thumbnail/{file_id}\")\nasync def get_thumbnail(...):\n    # 기존 썸네일 로직 이전\n```",
+            "status": "done",
+            "testStrategy": "`curl -X GET /api/v1/download/{file_id}`, `curl -X GET /api/v1/view/{file_id}`, `curl -X GET /api/v1/preview/{file_id}`, `curl -X GET /api/v1/thumbnail/{file_id}` 명령으로 각 엔드포인트가 정상적으로 동작하는지 확인합니다."
+          },
+          {
+            "id": 4,
+            "title": "`system.py` 모듈 엔드포인트 구현",
+            "description": "시스템 관리 관련 엔드포인트(헬스체크, 키 생성)를 `system.py` 모듈로 이전하고 구현합니다.",
+            "dependencies": [
+              "28.1"
+            ],
+            "details": "```python\nrouter = APIRouter(tags=[\"system\"])\n\n@router.get(\"/health\")\nasync def health_check():\n    # 기존 헬스체크 로직 이전\n\n@router.post(\"/keygen\")\nasync def generate_key(...):\n    # 기존 키 생성 로직 이전\n```",
+            "status": "done",
+            "testStrategy": "`curl -X GET /health`, `curl -X POST /keygen` 명령으로 각 엔드포인트가 정상적으로 동작하는지 확인합니다."
+          },
+          {
+            "id": 5,
+            "title": "공통 의존성 및 유틸리티 모듈 분리",
+            "description": "인증, 데이터베이스 연결 등 공통 의존성, Pydantic 모델 정의, 공통 유틸리티 함수를 각각 `dependencies.py`, `models.py`, `utils.py` 파일로 분리합니다.",
+            "dependencies": [],
+            "details": "- `dependencies.py` - 인증, 데이터베이스 연결 등 공통 의존성 정의 및 이전\n- `models.py` - Pydantic 모델 정의 및 이전\n- `utils.py` - 공통 유틸리티 함수 정의 및 이전",
+            "status": "done",
+            "testStrategy": "분리된 모듈들이 다른 모듈에서 정상적으로 import 되고 사용되는지 확인합니다."
+          },
+          {
+            "id": 6,
+            "title": "`main.py` 리팩토링 및 API 호환성 검증",
+            "description": "`main.py`에서 분리된 라우터 모듈들을 등록하고, 기존 미들웨어 및 설정을 유지하며, API 경로, 응답 형식, HTTP 메서드, 상태 코드, 에러 처리 로직 등 기존 API와의 완전한 호환성을 검증합니다.",
+            "dependencies": [
+              "28.2",
+              "28.3",
+              "28.4",
+              "28.5"
+            ],
+            "details": "```python\nfrom fastapi import FastAPI\nfrom routers import files, download, system\n\napp = FastAPI(title=\"FileWallBall API\")\n\n# 라우터 등록\napp.include_router(files.router)\napp.include_router(download.router)\napp.include_router(system.router)\n\n# 기존 미들웨어, 설정 등 유지\n```\n- 기존 API 경로 및 응답 형식 완전 유지\n- HTTP 메서드 및 상태 코드 동일하게 유지\n- 에러 처리 로직 그대로 이전",
+            "status": "done",
+            "testStrategy": "`docker-compose build` 및 `docker-compose up -d` 명령으로 서비스 정상 시작 및 애플리케이션 로그에서 import 에러 없음 확인. 기존 테스트 스크립트 `test_workflow.sh`를 실행하여 전체 워크플로우가 정상 동작하는지 확인. 각 모듈별 엔드포인트에 대한 개별 `curl` 테스트를 통해 기존 API와의 호환성을 검증합니다."
+          }
+        ]
+      },
+      {
+        "id": 29,
+        "title": "FileWallBall API 다양한 프로그래밍 언어별 사용법 가이드 작성",
+        "description": "Java, Node.js, Python, Go, C# 등 주요 프로그래밍 언어에서 FileWallBall API를 사용할 수 있도록 각 언어별 상세한 사용법 가이드와 예제 코드를 작성합니다. 코드 주석은 영문과 한글을 병행하여 작성하여 개발자들의 이해도를 높입니다.",
+        "status": "done",
+        "dependencies": [
+          28,
+          24
+        ],
+        "priority": "medium",
+        "details": "**1. 언어별 가이드 문서 구조 설계:**\n- `docs/` 디렉토리 하위에 `language-guides/` 폴더 생성\n- 각 언어별 독립적인 마크다운 문서 생성 (java.md, nodejs.md, python.md, go.md, csharp.md)\n- 공통 템플릿 구조 정의 및 일관성 있는 문서 형식 적용\n- 코드 주석은 영문과 한글을 병행하여 작성\n\n**2. Java 가이드 구현:**\n```java\n// HTTP Client Configuration (OkHttp 사용)\n// HTTP 클라이언트 설정\nOkHttpClient client = new OkHttpClient.Builder()\n    .connectTimeout(30, TimeUnit.SECONDS)  // 연결 타임아웃 설정\n    .readTimeout(60, TimeUnit.SECONDS)     // 읽기 타임아웃 설정\n    .build();\n\n// File Upload Example\n// 파일 업로드 예제\nRequestBody fileBody = RequestBody.create(\n    MediaType.parse(\"application/octet-stream\"), file);\nRequestBody requestBody = new MultipartBody.Builder()\n    .setType(MultipartBody.FORM)\n    .addFormDataPart(\"file\", file.getName(), fileBody)  // 파일 데이터 추가\n    .build();\n```\n\n**3. Node.js 가이드 구현:**\n```javascript\n// File Upload using axios\n// axios를 사용한 파일 업로드\nconst FormData = require('form-data');\nconst form = new FormData();\nform.append('file', fs.createReadStream('example.txt'));  // 파일 스트림 추가\n\nconst response = await axios.post('/api/v1/upload', form, {\n  headers: { ...form.getHeaders() },  // 멀티파트 헤더 설정\n  maxContentLength: Infinity,         // 최대 콘텐츠 길이 무제한\n  maxBodyLength: Infinity\n});\n```\n\n**4. Python 가이드 구현:**\n```python\n# File Upload using requests library\n# requests 라이브러리를 사용한 파일 업로드\nimport requests\nfrom requests_toolbelt.multipart.encoder import MultipartEncoder\n\n# Multipart data encoding\n# 멀티파트 데이터 인코딩\nmultipart_data = MultipartEncoder(\n    fields={'file': ('filename.txt', open('file.txt', 'rb'), 'text/plain')}\n)\nresponse = requests.post(\n    'http://localhost:8000/api/v1/upload',\n    data=multipart_data,\n    headers={'Content-Type': multipart_data.content_type}  # 콘텐츠 타입 설정\n)\n```\n\n**5. Go 가이드 구현:**\n```go\n// File Upload Implementation\n// 파일 업로드 구현\nfunc uploadFile(filename string) error {\n    file, err := os.Open(filename)  // 파일 열기\n    if err != nil { return err }\n    defer file.Close()\n    \n    body := &bytes.Buffer{}\n    writer := multipart.NewWriter(body)\n    part, err := writer.CreateFormFile(\"file\", filepath.Base(filename))  // 폼 파일 생성\n    if err != nil { return err }\n    \n    _, err = io.Copy(part, file)  // 파일 데이터 복사\n    writer.Close()\n    \n    req, err := http.NewRequest(\"POST\", \"http://localhost:8000/api/v1/upload\", body)\n    req.Header.Set(\"Content-Type\", writer.FormDataContentType())  // 콘텐츠 타입 설정\n    \n    client := &http.Client{}\n    resp, err := client.Do(req)\n    return err\n}\n```\n\n**6. C# 가이드 구현:**\n```csharp\n// File Upload using HttpClient\n// HttpClient를 사용한 파일 업로드\nusing var client = new HttpClient();\nusing var form = new MultipartFormDataContent();\nusing var fileStream = File.OpenRead(\"example.txt\");  // 파일 스트림 열기\nusing var streamContent = new StreamContent(fileStream);\n\nform.Add(streamContent, \"file\", \"example.txt\");  // 폼에 파일 추가\nvar response = await client.PostAsync(\"http://localhost:8000/api/v1/upload\", form);\n```\n\n**7. 공통 기능 구현 가이드:**\n- 환경 설정 및 의존성 설치 방법 (영문/한글 주석 병행)\n- API 인증 및 보안 헤더 설정\n- 파일 다운로드 및 스트리밍 처리\n- 이미지 뷰어/미리보기 구현\n- 에러 처리 및 재시도 로직\n- 진행률 표시 및 사용자 피드백\n- 성능 최적화 팁 (청크 업로드, 병렬 처리 등)\n\n**8. 실제 프로젝트 통합 예제:**\n- 각 언어별 완전한 예제 프로젝트 구조\n- 설정 파일 및 환경 변수 관리\n- 로깅 및 모니터링 구현\n- 단위 테스트 및 통합 테스트 예제",
+        "testStrategy": "**1. 문서 완성도 검증:**\n- 각 언어별 가이드 문서가 모든 필수 섹션을 포함하는지 확인\n- 코드 예제의 문법 정확성 및 실행 가능성 검증\n- 일관된 문서 구조 및 스타일 가이드 준수 확인\n- 영문/한글 주석의 적절성 및 일관성 검증\n\n**2. 코드 예제 실행 테스트:**\n- 각 언어별 환경에서 예제 코드 실제 실행 테스트\n- 파일 업로드/다운로드 기능 정상 동작 확인\n- 에러 처리 및 예외 상황 대응 코드 검증\n- 이미지 뷰어 및 미리보기 기능 테스트\n\n**3. API 호환성 검증:**\n- 현재 FileWallBall API 엔드포인트와의 호환성 확인\n- 각 언어별 HTTP 클라이언트 설정 검증\n- 멀티파트 폼 데이터 전송 형식 확인\n- JSON 응답 파싱 및 에러 코드 처리 검증\n\n**4. 사용자 경험 테스트:**\n- 개발자가 문서를 따라 실제 구현할 수 있는지 검증\n- 각 언어별 의존성 설치 및 환경 설정 가이드 테스트\n- 예제 코드의 가독성 및 이해도 평가 (영문/한글 주석 효과성 포함)\n- 성능 최적화 팁의 실효성 검증\n\n**5. 문서 품질 검증:**\n- 마크다운 문법 및 렌더링 확인\n- 코드 블록 하이라이팅 및 형식 검증\n- 링크 및 참조 정확성 확인\n- 다양한 프로그래밍 언어 개발자를 위한 명확성 및 접근성 평가",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "언어별 가이드 문서 구조 설계 및 공통 템플릿 정의",
+            "description": "FileWallBall API 사용법 가이드 작성을 위한 문서 디렉토리 구조를 설계하고, 각 언어별 마크다운 문서 파일을 생성합니다. 또한, 일관된 문서 형식을 위한 공통 템플릿을 정의하며, 영문/한글 주석 스타일 가이드를 포함합니다.",
+            "status": "done",
+            "dependencies": [],
+            "details": "`docs/` 디렉토리 하위에 `language-guides/` 폴더 생성. 각 언어별 독립적인 마크다운 문서 생성 (java.md, nodejs.md, python.md, go.md, csharp.md). 공통 템플릿 구조 정의 및 일관성 있는 문서 형식 적용. 영문과 한글을 병행한 주석 작성 가이드라인 정의.",
+            "testStrategy": "문서 디렉토리 및 파일 구조가 설계에 맞게 생성되었는지 확인. 공통 템플릿이 정의되었고 일관된 형식을 따르는지 검토. 영문/한글 주석 스타일 가이드가 명확하게 정의되었는지 확인."
+          },
+          {
+            "id": 2,
+            "title": "Java 및 C# FileWallBall API 사용법 가이드 구현",
+            "description": "Java와 C# 언어에서 FileWallBall API를 사용하여 파일 업로드, 다운로드 등 주요 기능을 구현하는 상세 가이드와 예제 코드를 작성합니다. 코드 주석은 영문과 한글을 병행하여 작성합니다.",
+            "status": "done",
+            "dependencies": [
+              1
+            ],
+            "details": "Java 가이드: HTTP 클라이언트 설정 (OkHttp 사용), 파일 업로드 예제 코드 작성. C# 가이드: HttpClient를 사용한 파일 업로드 예제 코드 작성. 각 언어별 환경 설정 및 의존성 설치 방법 포함. 모든 코드에 영문/한글 병행 주석 적용.",
+            "testStrategy": "Java 및 C# 환경에서 제공된 예제 코드가 정상적으로 컴파일 및 실행되는지 확인. 파일 업로드 기능이 FileWallBall API와 연동하여 올바르게 동작하는지 검증. 영문/한글 주석의 적절성 및 이해도 평가."
+          },
+          {
+            "id": 3,
+            "title": "Node.js FileWallBall API 사용법 가이드 구현",
+            "description": "Node.js 환경에서 FileWallBall API를 사용하여 파일 업로드, 다운로드 등 주요 기능을 구현하는 상세 가이드와 예제 코드를 작성합니다. 코드 주석은 영문과 한글을 병행하여 작성합니다.",
+            "status": "done",
+            "dependencies": [
+              1
+            ],
+            "details": "axios 기반 파일 업로드 예제 코드 작성. Node.js 환경 설정 및 의존성 설치 방법 포함. 모든 코드에 영문/한글 병행 주석 적용.",
+            "testStrategy": "Node.js 환경에서 제공된 예제 코드가 정상적으로 실행되는지 확인. 파일 업로드 기능이 FileWallBall API와 연동하여 올바르게 동작하는지 검증. 영문/한글 주석의 적절성 및 이해도 평가."
+          },
+          {
+            "id": 4,
+            "title": "Python FileWallBall API 사용법 가이드 구현",
+            "description": "Python 환경에서 FileWallBall API를 사용하여 파일 업로드, 다운로드 등 주요 기능을 구현하는 상세 가이드와 예제 코드를 작성합니다. 코드 주석은 영문과 한글을 병행하여 작성합니다.",
+            "status": "done",
+            "dependencies": [
+              1
+            ],
+            "details": "requests 라이브러리 및 requests_toolbelt.multipart.encoder를 사용한 파일 업로드 예제 코드 작성. Python 환경 설정 및 의존성 설치 방법 포함. 모든 코드에 영문/한글 병행 주석 적용.",
+            "testStrategy": "Python 환경에서 제공된 예제 코드가 정상적으로 실행되는지 확인. 파일 업로드 기능이 FileWallBall API와 연동하여 올바르게 동작하는지 검증. 영문/한글 주석의 적절성 및 이해도 평가."
+          },
+          {
+            "id": 5,
+            "title": "Go FileWallBall API 사용법 가이드 구현",
+            "description": "Go 언어 환경에서 FileWallBall API를 사용하여 파일 업로드, 다운로드 등 주요 기능을 구현하는 상세 가이드와 예제 코드를 작성합니다. 코드 주석은 영문과 한글을 병행하여 작성합니다.",
+            "status": "done",
+            "dependencies": [
+              1
+            ],
+            "details": "Go의 net/http 및 multipart 패키지를 사용한 파일 업로드 예제 코드 작성. Go 환경 설정 및 의존성 설치 방법 포함. 모든 코드에 영문/한글 병행 주석 적용.",
+            "testStrategy": "Go 환경에서 제공된 예제 코드가 정상적으로 컴파일 및 실행되는지 확인. 파일 업로드 기능이 FileWallBall API와 연동하여 올바르게 동작하는지 검증. 영문/한글 주석의 적절성 및 이해도 평가."
+          },
+          {
+            "id": 6,
+            "title": "공통 기능 및 고급 사용법 가이드 작성",
+            "description": "모든 언어에 공통적으로 적용될 수 있는 API 인증, 에러 처리, 파일 다운로드, 성능 최적화 등 고급 사용법에 대한 가이드를 작성합니다. 코드 주석은 영문과 한글을 병행하여 작성합니다.",
+            "status": "done",
+            "dependencies": [
+              2,
+              3,
+              4,
+              5
+            ],
+            "details": "API 인증 및 보안 헤더 설정, 파일 다운로드 및 스트리밍 처리, 이미지 뷰어/미리보기 구현, 에러 처리 및 재시도 로직, 진행률 표시 및 사용자 피드백, 성능 최적화 팁 (청크 업로드, 병렬 처리 등)에 대한 가이드 작성. 모든 코드 예제에 영문/한글 병행 주석 적용.",
+            "testStrategy": "공통 가이드 내용이 각 언어별 가이드와 일관성을 유지하는지 확인. 제시된 고급 기능들이 실제 API와 연동하여 동작 가능한지 개념적으로 검증. 영문/한글 주석의 일관성 및 명확성 평가."
+          },
+          {
+            "id": 7,
+            "title": "실제 프로젝트 통합 예제 완성 및 최종 검토",
+            "description": "각 언어별 완전한 예제 프로젝트 구조를 제공하고, 전체 가이드 문서의 완성도를 검증하며, 일관된 품질을 확보합니다. 영문/한글 병행 주석의 품질을 최종 검토합니다.",
+            "status": "done",
+            "dependencies": [
+              2,
+              3,
+              4,
+              5,
+              6
+            ],
+            "details": "각 언어별 완전한 예제 프로젝트 구조 제공. 설정 파일 및 환경 변수 관리, 로깅 및 모니터링 구현, 단위 테스트 및 통합 테스트 예제 포함. 전체 가이드 문서의 완성도 검증 (모든 필수 섹션 포함, 문법 정확성, 실행 가능성), 일관된 문서 구조 및 스타일 가이드 준수 확인. 영문/한글 주석의 품질 및 일관성 최종 검토.",
+            "testStrategy": "각 언어별 통합 예제 프로젝트가 독립적으로 실행되고 FileWallBall API와 정상적으로 연동되는지 테스트. 전체 가이드 문서에 대한 최종 검토를 통해 오탈자, 비일관성, 누락된 내용이 없는지 확인. 영문/한글 주석의 품질, 일관성, 이해도를 종합적으로 평가. 문서 완성도 및 코드 예제 실행 테스트 전략을 기반으로 최종 검증 수행."
+          }
+        ]
+      },
+      {
+        "id": 30,
+        "title": "Ubuntu 환경 FileWallBall 프로덕션 자동 설치 스크립트 개발",
+        "description": "Ubuntu 18.04~24.04 환경에서 FileWallBall을 프로덕션 프로필로 원클릭 설치하는 완전 자동화 스크립트를 개발하여 DB 설정부터 애플리케이션 실행까지 전체 환경을 구축합니다.",
+        "details": "**1. Ubuntu 환경 요구사항 분석 및 검증 모듈:**\n```bash\n#!/bin/bash\n# ubuntu-installer.sh - FileWallBall 자동 설치 스크립트\n\ncheck_ubuntu_version() {\n    local version=$(lsb_release -rs)\n    case $version in\n        18.04|20.04|22.04|24.04)\n            echo \"✓ Ubuntu $version 지원됨\"\n            return 0\n            ;;\n        *)\n            echo \"✗ 지원되지 않는 Ubuntu 버전: $version\"\n            exit 1\n            ;;\n    esac\n}\n\ncheck_system_requirements() {\n    # 최소 시스템 요구사항 검증\n    local ram=$(free -m | awk 'NR==2{printf \"%.0f\", $2/1024}')\n    local disk=$(df -BG / | awk 'NR==2{print $4}' | sed 's/G//')\n    \n    [[ $ram -lt 2 ]] && echo \"✗ 최소 2GB RAM 필요\" && exit 1\n    [[ $disk -lt 10 ]] && echo \"✗ 최소 10GB 디스크 공간 필요\" && exit 1\n    \n    echo \"✓ 시스템 요구사항 충족\"\n}\n```\n\n**2. Docker 및 Docker Compose 자동 설치:**\n```bash\ninstall_docker() {\n    if ! command -v docker &> /dev/null; then\n        echo \"Docker 설치 중...\"\n        curl -fsSL https://get.docker.com -o get-docker.sh\n        sudo sh get-docker.sh\n        sudo usermod -aG docker $USER\n        sudo systemctl enable docker\n        sudo systemctl start docker\n        echo \"✓ Docker 설치 완료\"\n    else\n        echo \"✓ Docker 이미 설치됨\"\n    fi\n}\n\ninstall_docker_compose() {\n    if ! command -v docker-compose &> /dev/null; then\n        echo \"Docker Compose 설치 중...\"\n        sudo curl -L \"https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)\" -o /usr/local/bin/docker-compose\n        sudo chmod +x /usr/local/bin/docker-compose\n        echo \"✓ Docker Compose 설치 완료\"\n    else\n        echo \"✓ Docker Compose 이미 설치됨\"\n    fi\n}\n```\n\n**3. DB 스크립트 통합 및 자동화:**\n```bash\nsetup_database_integrated() {\n    echo \"통합 데이터베이스 설정 시작...\"\n    \n    # setup-database.sh 기능 통합\n    create_database_config() {\n        cat > .env.prod << EOF\nMYSQL_ROOT_PASSWORD=filewallball_root_2024\nMYSQL_DATABASE=filewallball_db\nMYSQL_USER=filewallball_user\nMYSQL_PASSWORD=filewallball_pass_2024\nDB_HOST=mariadb\nREDIS_HOST=redis\nMASTER_KEY=your_secure_master_key_2024\nAPI_PORT=8000\nEOF\n    }\n    \n    # test-db-connection.sh 기능 통합\n    test_database_connection() {\n        echo \"데이터베이스 연결 테스트 중...\"\n        local max_attempts=30\n        local attempt=1\n        \n        while [ $attempt -le $max_attempts ]; do\n            if docker-compose -f docker-compose.prod.yml exec -T mariadb mysql -u filewallball_user -pfilewallball_pass_2024 -e \"SELECT 1;\" &>/dev/null; then\n                echo \"✓ 데이터베이스 연결 성공\"\n                return 0\n            fi\n            echo \"데이터베이스 연결 대기 중... ($attempt/$max_attempts)\"\n            sleep 2\n            ((attempt++))\n        done\n        \n        echo \"✗ 데이터베이스 연결 실패\"\n        return 1\n    }\n    \n    create_database_config\n    docker-compose -f docker-compose.prod.yml up -d mariadb redis\n    test_database_connection || exit 1\n}\n```\n\n**4. Production 환경 자동 설정:**\n```bash\nsetup_production_environment() {\n    echo \"프로덕션 환경 설정 중...\"\n    \n    # 필요한 디렉토리 생성\n    mkdir -p {uploads,logs,backups,ssl}\n    \n    # 방화벽 설정 (선택적)\n    setup_firewall() {\n        if command -v ufw &> /dev/null; then\n            sudo ufw allow 8000/tcp\n            sudo ufw allow 22/tcp\n            echo \"✓ 방화벽 설정 완료\"\n        fi\n    }\n    \n    # SSL 인증서 설정 (Let's Encrypt - 선택적)\n    setup_ssl_optional() {\n        read -p \"도메인이 있으면 입력하세요 (없으면 Enter): \" domain\n        if [[ -n \"$domain\" ]]; then\n            # Let's Encrypt 설정 로직\n            echo \"SSL 설정은 수동으로 진행해주세요: certbot --nginx -d $domain\"\n        fi\n    }\n    \n    setup_firewall\n    setup_ssl_optional\n}\n```\n\n**5. 종합 검증 및 문제 해결:**\n```bash\ncomprehensive_verification() {\n    echo \"종합 검증 시작...\"\n    \n    # 서비스 상태 확인\n    check_services() {\n        local services=(\"filewallball\" \"mariadb\" \"redis\")\n        for service in \"${services[@]}\"; do\n            if docker-compose -f docker-compose.prod.yml ps $service | grep -q \"Up\"; then\n                echo \"✓ $service 서비스 정상\"\n            else\n                echo \"✗ $service 서비스 문제 발생\"\n                return 1\n            fi\n        done\n    }\n    \n    # API 헬스체크\n    test_api_health() {\n        local max_attempts=20\n        local attempt=1\n        \n        while [ $attempt -le $max_attempts ]; do\n            if curl -s http://localhost:8000/health | grep -q \"ok\"; then\n                echo \"✓ API 헬스체크 성공\"\n                return 0\n            fi\n            echo \"API 시작 대기 중... ($attempt/$max_attempts)\"\n            sleep 3\n            ((attempt++))\n        done\n        \n        echo \"✗ API 헬스체크 실패\"\n        return 1\n    }\n    \n    # 파일 업로드 테스트\n    test_file_upload() {\n        echo \"파일 업로드 테스트 중...\"\n        echo \"test content\" > test_file.txt\n        \n        local response=$(curl -s -X POST \\\n            -F \"file=@test_file.txt\" \\\n            -F \"project_key=test_project\" \\\n            http://localhost:8000/api/v1/upload)\n        \n        if echo \"$response\" | grep -q \"file_id\"; then\n            echo \"✓ 파일 업로드 테스트 성공\"\n            rm -f test_file.txt\n            return 0\n        else\n            echo \"✗ 파일 업로드 테스트 실패\"\n            rm -f test_file.txt\n            return 1\n        fi\n    }\n    \n    check_services && test_api_health && test_file_upload\n}\n```\n\n**6. 완전한 문서화 및 사용법 가이드:**\n```bash\ngenerate_documentation() {\n    cat > INSTALLATION_GUIDE.md << 'EOF'\n# FileWallBall Ubuntu 자동 설치 가이드\n\n## 지원 환경\n- Ubuntu 18.04, 20.04, 22.04, 24.04 LTS\n- 최소 2GB RAM, 10GB 디스크 공간\n\n## 원클릭 설치\n```bash\ncurl -fsSL https://raw.githubusercontent.com/your-repo/filewallball/main/ubuntu-installer.sh | bash\n```\n\n## 수동 설치\n1. 스크립트 다운로드: `wget https://raw.githubusercontent.com/your-repo/filewallball/main/ubuntu-installer.sh`\n2. 실행 권한 부여: `chmod +x ubuntu-installer.sh`\n3. 설치 실행: `./ubuntu-installer.sh`\n\n## 설치 후 확인\n- API 접속: http://localhost:8000\n- 헬스체크: http://localhost:8000/health\n- API 문서: http://localhost:8000/docs\n\n## 문제 해결\n- 로그 확인: `docker-compose -f docker-compose.prod.yml logs`\n- 서비스 재시작: `docker-compose -f docker-compose.prod.yml restart`\n- 완전 재설치: `./ubuntu-installer.sh --reinstall`\nEOF\n\n    echo \"✓ 설치 가이드 생성 완료\"\n}\n```\n\n**7. 메인 설치 스크립트 통합:**\n```bash\nmain() {\n    echo \"FileWallBall Ubuntu 자동 설치 시작...\"\n    \n    # 단계별 실행\n    check_ubuntu_version\n    check_system_requirements\n    install_docker\n    install_docker_compose\n    \n    # FileWallBall 소스 다운로드\n    if [[ ! -d \"filewallball\" ]]; then\n        git clone https://github.com/your-repo/filewallball.git\n        cd filewallball\n    fi\n    \n    setup_database_integrated\n    setup_production_environment\n    \n    # 전체 스택 시작\n    docker-compose -f docker-compose.prod.yml up -d\n    \n    comprehensive_verification\n    generate_documentation\n    \n    echo \"🎉 FileWallBall 설치 완료!\"\n    echo \"접속 URL: http://localhost:8000\"\n    echo \"API 문서: http://localhost:8000/docs\"\n}\n\n# 스크립트 실행\nmain \"$@\"\n```",
+        "testStrategy": "**1. Ubuntu 버전별 설치 테스트:**\n- Ubuntu 18.04, 20.04, 22.04, 24.04 각 환경에서 스크립트 실행\n- 가상머신 또는 Docker 컨테이너를 이용한 클린 환경 테스트\n- 각 버전별 패키지 호환성 및 의존성 해결 확인\n\n**2. 설치 프로세스 검증:**\n```bash\n# 설치 전 환경 정리\nsudo docker system prune -af\nsudo apt-get remove docker docker-engine docker.io containerd runc\n\n# 스크립트 실행 및 로그 수집\n./ubuntu-installer.sh 2>&1 | tee installation.log\n\n# 설치 결과 검증\ndocker --version\ndocker-compose --version\ndocker-compose -f docker-compose.prod.yml ps\n```\n\n**3. 서비스 기능 테스트:**\n```bash\n# API 헬스체크\ncurl -f http://localhost:8000/health\n\n# 파일 업로드 테스트\necho \"test\" > test.txt\ncurl -X POST -F \"file=@test.txt\" -F \"project_key=test\" http://localhost:8000/api/v1/upload\n\n# 데이터베이스 연결 테스트\ndocker-compose -f docker-compose.prod.yml exec mariadb mysql -u filewallball_user -p -e \"SHOW TABLES;\"\n\n# Redis 연결 테스트\ndocker-compose -f docker-compose.prod.yml exec redis redis-cli ping\n```\n\n**4. 에러 시나리오 테스트:**\n- 네트워크 연결 실패 시 재시도 로직 검증\n- 포트 충돌 상황에서의 에러 처리 확인\n- 디스크 공간 부족 시 적절한 에러 메시지 출력\n- Docker 설치 실패 시 롤백 및 정리 기능 테스트\n\n**5. 성능 및 안정성 테스트:**\n- 설치 완료 후 시스템 리소스 사용량 모니터링\n- 동시 접속 및 파일 업로드 부하 테스트\n- 서비스 재시작 후 자동 복구 확인\n- 로그 파일 크기 및 로테이션 정책 검증\n\n**6. 문서화 검증:**\n- 생성된 INSTALLATION_GUIDE.md 문서 완성도 확인\n- 사용자 시나리오별 가이드 정확성 검증\n- 문제 해결 섹션의 실제 적용 가능성 테스트",
+        "status": "done",
+        "dependencies": [
+          27,
+          10,
+          13
+        ],
+        "priority": "high",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Ubuntu 환경 요구사항 분석 및 검증 모듈 개발",
+            "description": "Ubuntu 버전(18.04~24.04) 및 최소 시스템 요구사항(RAM 2GB, 디스크 10GB)을 검증하는 스크립트 모듈을 개발합니다. 스크립트 실행 전 환경의 적합성을 확인하여 안정적인 설치를 보장합니다.",
+            "dependencies": [],
+            "details": "```bash\ncheck_ubuntu_version() { ... }\ncheck_system_requirements() { ... }\n```",
+            "status": "done",
+            "testStrategy": "각 지원 Ubuntu 버전(18.04, 20.04, 22.04, 24.04)에서 스크립트 실행 및 요구사항 미달 환경에서 실패 확인. `lsb_release -rs` 및 `free -m`, `df -BG /` 명령어를 사용하여 검증 로직 테스트."
+          },
+          {
+            "id": 2,
+            "title": "Docker 및 Docker Compose 자동 설치 모듈 개발",
+            "description": "Ubuntu 환경에 Docker 및 Docker Compose를 자동으로 설치하고, 기존 설치 여부를 확인하여 중복 설치를 방지하는 스크립트 모듈을 개발합니다. FileWallBall 서비스 실행을 위한 필수 환경을 구축합니다.",
+            "dependencies": [
+              "30.1"
+            ],
+            "details": "```bash\ninstall_docker() { ... }\ninstall_docker_compose() { ... }\n```",
+            "status": "done",
+            "testStrategy": "Docker가 설치되지 않은 환경과 설치된 환경에서 스크립트 실행 후 `docker --version` 및 `docker-compose --version` 명령어를 통해 Docker 및 Docker Compose 버전 확인."
+          },
+          {
+            "id": 3,
+            "title": "FileWallBall 소스 코드 다운로드 및 DB/Redis 설정 자동화",
+            "description": "FileWallBall GitHub 저장소에서 소스 코드를 클론하고, 프로덕션 환경에 필요한 `.env.prod` 파일을 생성하며, MariaDB 및 Redis 컨테이너를 시작하고 데이터베이스 연결을 테스트하는 스크립트 모듈을 개발합니다. DB 스크립트 통합 및 자동화 기능을 포함합니다.",
+            "dependencies": [
+              "30.2"
+            ],
+            "details": "```bash\n# FileWallBall 소스 다운로드\nif [[ ! -d \"filewallball\" ]]; then\n    git clone https://github.com/your-repo/filewallball.git\n    cd filewallball\nfi\n\nsetup_database_integrated() { ... }\n```",
+            "status": "done",
+            "testStrategy": "소스 코드 클론 여부 확인, `.env.prod` 파일 내용 확인, `docker-compose -f docker-compose.prod.yml ps` 명령으로 MariaDB 및 Redis 컨테이너 정상 시작 확인 및 `test_database_connection` 함수를 통한 DB 연결 성공 여부 확인."
+          },
+          {
+            "id": 4,
+            "title": "FileWallBall 프로덕션 환경 설정 모듈 개발",
+            "description": "FileWallBall 애플리케이션 운영에 필요한 디렉토리(uploads, logs, backups, ssl)를 생성하고, 방화벽(UFW) 설정을 자동화하며, 선택적으로 SSL 인증서 설정을 위한 가이드를 제공하는 스크립트 모듈을 개발합니다.",
+            "dependencies": [
+              "30.3"
+            ],
+            "details": "```bash\nsetup_production_environment() { ... }\n```",
+            "status": "done",
+            "testStrategy": "필요한 디렉토리 생성 여부 확인 (`ls -d {uploads,logs,backups,ssl}`), UFW 규칙 적용 확인 (`sudo ufw status`), SSL 설정 가이드 메시지 출력 확인."
+          },
+          {
+            "id": 5,
+            "title": "FileWallBall 서비스 종합 검증 및 문제 해결 모듈 개발",
+            "description": "FileWallBall, MariaDB, Redis 서비스 컨테이너의 상태를 확인하고, API 헬스체크를 통해 애플리케이션의 정상 동작을 검증하며, 파일 업로드 테스트를 수행하여 핵심 기능을 확인하는 스크립트 모듈을 개발합니다. 문제 발생 시 진단에 필요한 정보를 제공합니다.",
+            "dependencies": [
+              "30.4"
+            ],
+            "details": "```bash\ncomprehensive_verification() { ... }\n```",
+            "status": "done",
+            "testStrategy": "`docker-compose -f docker-compose.prod.yml ps` 명령으로 모든 서비스가 정상 'Up' 상태인지 확인, `curl http://localhost:8000/health` 엔드포인트 응답 확인, `test_file_upload` 함수를 통한 파일 업로드 및 응답 확인."
+          },
+          {
+            "id": 6,
+            "title": "FileWallBall 설치 가이드 문서 자동 생성 모듈 개발",
+            "description": "FileWallBall 자동 설치 스크립트의 사용법, 지원 환경, 원클릭/수동 설치 방법, 설치 후 확인 사항, 문제 해결 방법 등을 포함하는 `INSTALLATION_GUIDE.md` 파일을 자동으로 생성하는 스크립트 모듈을 개발합니다. 사용자 편의성을 높이기 위한 상세 가이드를 제공합니다.",
+            "dependencies": [
+              "30.5"
+            ],
+            "details": "```bash\ngenerate_documentation() { ... }\n```",
+            "status": "done",
+            "testStrategy": "`INSTALLATION_GUIDE.md` 파일이 생성되었는지, 내용이 올바르게 포함되었는지, 특히 원클릭 설치 명령어와 접속 URL 등이 정확한지 확인."
+          },
+          {
+            "id": 7,
+            "title": "메인 설치 스크립트 통합 및 전체 워크플로우 구현",
+            "description": "위에서 개발된 모든 모듈들을 순서대로 호출하여 FileWallBall 자동 설치의 전체 워크플로우를 구성하는 메인 스크립트(`main` 함수)를 구현합니다. 초기 환경 검증부터 Docker 설치, 소스 다운로드, DB/환경 설정, 서비스 시작, 종합 검증, 문서 생성까지 모든 단계가 포함된 완전 자동화 스크립트를 완성합니다.",
+            "dependencies": [
+              "30.1",
+              "30.2",
+              "30.3",
+              "30.4",
+              "30.5",
+              "30.6"
+            ],
+            "details": "```bash\nmain() { ... }\n```",
+            "status": "done",
+            "testStrategy": "클린 Ubuntu 환경에서 메인 스크립트를 처음부터 끝까지 실행하여 모든 단계가 오류 없이 완료되고 FileWallBall 서비스가 정상적으로 동작하며, 최종적으로 접속 URL 및 API 문서 URL이 출력되는지 확인."
+          }
+        ]
       }
     ],
     "metadata": {
       "created": "2025-08-01T01:34:06.334Z",
-      "updated": "2025-08-24T15:49:43.453Z",
+      "updated": "2025-08-25T02:43:06.925Z",
       "description": "Tasks for container-test context"
     }
   }

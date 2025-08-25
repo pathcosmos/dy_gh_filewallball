@@ -176,12 +176,4 @@ volumes:
 networks:
   app-network:
     driver: bridge
-    ipam:
-      config:
-        - subnet: 172.20.0.0/16
-        - gateway: 172.20.0.1
-    driver_opts:
-      com.docker.network.bridge.name: filewallball-br0
-    labels:
-      - "com.docker.compose.network=app-network"
-      - "com.docker.compose.project=dy_gh_filewallball"
+    # ipam 설정 제거하고 Docker가 자동 할당하도록
