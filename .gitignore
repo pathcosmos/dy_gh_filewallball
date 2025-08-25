@@ -102,3 +102,6 @@ tests/results/
 # Task files (uncomment if needed)
 # tasks.json
 # tasks/
+
+# Test images
+tests/images/
