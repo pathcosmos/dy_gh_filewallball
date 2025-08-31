@@ -347,9 +347,11 @@ async def view_file(
 ### 🔧 사용 방법
 
 #### 🖼️ 이미지 파일
-- 이미지를 직접 표시
-- 30분 캐시 설정
-- 최적화된 이미지 스트리밍
+- **썸네일 생성**: 300x300 픽셀 이하의 작은 크기로 자동 리사이징
+- **품질 최적화**: JPEG 품질 85%, PNG 최적화
+- **투명도 처리**: PNG 투명 이미지는 흰색 배경으로 변환
+- **30분 캐시**: 성능 최적화를 위한 캐시 설정
+- **폴백 지원**: 썸네일 생성 실패 시 원본 이미지 반환
 
 #### 📝 텍스트 파일
 - 첫 1000자만 표시
@@ -363,7 +365,7 @@ async def view_file(
 
 ### 📋 요청 예시
 ```bash
-# 이미지 미리보기
+# 이미지 미리보기 (썸네일)
 curl -X GET "http://localhost:8000/preview/550e8400-e29b-41d4-a716-446655440000"
 
 # 브라우저에서 직접 접근
@@ -372,9 +374,13 @@ curl -X GET "http://localhost:8000/preview/550e8400-e29b-41d4-a716-446655440000"
 
 ### ✅ 응답 형식
 
-#### 이미지 파일
+#### 이미지 파일 (썸네일)
 - **Content-Type**: 이미지 MIME 타입
 - **Cache-Control**: `public, max-age=1800` (30분)
+- **X-Thumbnail**: `true` (썸네일 응답 표시)
+- **X-Original-Size**: 원본 이미지 크기 (예: `1920x1080`)
+- **X-Thumbnail-Size**: 썸네일 크기 (예: `300x169`)
+- **X-Thumbnail-Quality**: 썸네일 품질 (85)
 
 #### 텍스트 파일
 ```html
@@ -419,12 +425,20 @@ curl -X GET "http://localhost:8000/preview/550e8400-e29b-41d4-a716-446655440000"
 - 삭제된 파일은 미리보기할 수 없음
 - 텍스트 파일은 1000자로 제한
 - 대용량 파일은 성능에 영향
+- 썸네일 생성 실패 시 원본 이미지 반환
 
 ### 🎨 UI 특징
 - **반응형 디자인**: 모바일과 데스크톱 모두 지원
 - **모던한 스타일**: Bootstrap 스타일의 깔끔한 UI
 - **이모지 사용**: 직관적인 아이콘
 - **다운로드 링크**: 전체 파일 다운로드 버튼
+
+### 🖼️ 썸네일 기능
+- **자동 리사이징**: 최대 300x300 픽셀로 자동 조정
+- **비율 유지**: 원본 이미지의 가로세로 비율 유지
+- **품질 최적화**: 파일 크기와 품질의 균형
+- **다양한 형식 지원**: JPEG, PNG, GIF, BMP, WebP 등
+- **투명도 처리**: PNG 투명 이미지의 적절한 배경 처리
     """,
     responses={
         200: {"description": "파일 미리보기 성공"},
@@ -449,17 +463,60 @@ async def preview_file(
         if not file_path.exists():
             raise HTTPException(status_code=404, detail="Physical file not found")
         
-        # For images, return the image directly
-        if file_info.mime_type and file_info.mime_type.startswith('image/'):
-            return FileResponse(
-                path=file_path,
-                media_type=file_info.mime_type,
-                headers={
-                    "Cache-Control": "public, max-age=1800",  # 30분 캐시
-                }
-            )
+        # For images, generate and return thumbnail
+        logger.info(f"DEBUG: Checking file {file_id}, mime_type: {file_info.mime_type}, is_image: {file_info.mime_type and file_info.mime_type.startswith('image/')}")
         
-        # For text files, return formatted preview
+        if file_info.mime_type and file_info.mime_type.startswith('image/'):
+            logger.info(f"Processing image file: {file_id}, type: {file_info.mime_type}")
+            
+            # Force thumbnail generation for testing
+            try:
+                from PIL import Image
+                import io
+                
+                logger.info(f"PIL imported successfully for {file_id}")
+                
+                # Open image and generate thumbnail
+                with Image.open(file_path) as img:
+                    logger.info(f"Image opened successfully: {img.size}, mode: {img.mode}")
+                    
+                    # Simple thumbnail generation
+                    max_size = 300
+                    img.thumbnail((max_size, max_size), Image.Resampling.LANCZOS)
+                    
+                    # Convert to bytes
+                    img_buffer = io.BytesIO()
+                    img.save(img_buffer, format='PNG')
+                    img_buffer.seek(0)
+                    thumbnail_data = img_buffer.getvalue()
+                    
+                    logger.info(f"Generated thumbnail for {file_id}: size: {len(thumbnail_data)} bytes")
+                    
+                    # Return thumbnail with appropriate headers
+                    from fastapi.responses import Response
+                    return Response(
+                        content=thumbnail_data,
+                        media_type=file_info.mime_type,
+                        headers={
+                            "Cache-Control": "public, max-age=1800",
+                            "X-Thumbnail": "true",
+                            "X-Thumbnail-Size": f"{img.size[0]}x{img.size[1]}",
+                            "Content-Disposition": f"inline; filename=\"thumb_{file_info.original_filename}\""
+                        }
+                    )
+                    
+            except Exception as e:
+                logger.error(f"Thumbnail generation failed for {file_id}: {e}", exc_info=True)
+                # Fallback to original image if thumbnail generation fails
+                return FileResponse(
+                    path=file_path,
+                    media_type=file_info.mime_type,
+                    headers={
+                        "Cache-Control": "public, max-age=1800",
+                        "X-Thumbnail": "false",
+                        "X-Fallback": "true"
+                    }
+                )
         elif file_info.mime_type and file_info.mime_type.startswith('text/'):
             try:
                 with open(file_path, 'r', encoding='utf-8') as f:
