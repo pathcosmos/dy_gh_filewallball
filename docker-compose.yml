@@ -27,7 +27,7 @@ services:
       - /tmp
       - /var/tmp
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD:-root_password}"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD:-FileWallBall_Root_2025!}"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -131,7 +131,7 @@ services:
     environment:
       - DB_HOST=mariadb
       - DB_PORT=3306
-      - DB_ROOT_PASSWORD=${DB_ROOT_PASSWORD:-root_password}
+      - DB_ROOT_PASSWORD=${DB_ROOT_PASSWORD:-FileWallBall_Root_2025!}
       - BACKUP_RETENTION_DAYS=${BACKUP_RETENTION_DAYS:-7}
       - BACKUP_SCHEDULE=${BACKUP_SCHEDULE:-0 2 * * *}
     networks:

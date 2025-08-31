@@ -5,7 +5,7 @@ services:
   # MariaDB Database - Development
   mariadb:
     environment:
-      MYSQL_ROOT_PASSWORD: dev_root_password
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-FileWallBall_Root_2025!}
       MYSQL_DATABASE: filewallball_dev
       MYSQL_USER: filewallball_dev_user
       MYSQL_PASSWORD: dev_password
