@@ -130,6 +130,7 @@ async def download_file(
 - 이미지를 직접 브라우저에 표시
 - 캐시 헤더 설정 (1시간)
 - 바이트 범위 요청 지원
+- 자동 MIME 타입 감지 및 수정
 
 #### 📄 기타 파일
 - 다운로드 링크 제공
@@ -170,6 +171,7 @@ curl -X GET "http://localhost:8000/view/550e8400-e29b-41d4-a716-446655440000"
 - **Content-Type**: 이미지 MIME 타입
 - **Cache-Control**: `public, max-age=3600`
 - **Accept-Ranges**: `bytes`
+- **Content-Disposition**: `inline` (브라우저에서 직접 표시)
 
 ### ⚠️ 주의사항
 - 존재하지 않는 파일 ID는 404 에러 반환
@@ -182,6 +184,7 @@ curl -X GET "http://localhost:8000/view/550e8400-e29b-41d4-a716-446655440000"
 - **파일 크기 표시**: 바이트 단위로 표시
 - **업로드 시간 표시**: ISO 형식으로 표시
 - **반응형 디자인**: 모바일 친화적 UI
+- **자동 MIME 타입 감지**: 파일 확장자 기반 MIME 타입 추정
     """,
     responses={
         200: {"description": "파일 내용 보기 성공"},
@@ -206,21 +209,54 @@ async def view_file(
         if not file_path.exists():
             raise HTTPException(status_code=404, detail="Physical file not found")
         
-        # Check if file is image-based
-        if file_info.mime_type and file_info.mime_type.startswith('image/'):
-            # Stream image file for viewing
-            logger.info(f"Streaming image file: {file_id}, type: {file_info.mime_type}")
+        # Enhanced MIME type detection for images
+        mime_type = file_info.mime_type
+        if not mime_type or mime_type == 'application/octet-stream':
+            # Try to detect MIME type from file extension
+            import mimetypes
+            detected_mime = mimetypes.guess_type(file_info.original_filename)[0]
+            if detected_mime:
+                mime_type = detected_mime
+                logger.info(f"Auto-detected MIME type for {file_id}: {detected_mime}")
+        
+        # Check if file is image-based (improved detection)
+        is_image = (
+            (mime_type and mime_type.startswith('image/')) or
+            (file_info.file_extension.lower() in ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.tiff', '.tif'])
+        )
+        
+        if is_image:
+            # Ensure proper MIME type for images
+            if not mime_type or not mime_type.startswith('image/'):
+                # Map common image extensions to MIME types
+                extension_mime_map = {
+                    '.jpg': 'image/jpeg',
+                    '.jpeg': 'image/jpeg',
+                    '.png': 'image/png',
+                    '.gif': 'image/gif',
+                    '.bmp': 'image/bmp',
+                    '.webp': 'image/webp',
+                    '.tiff': 'image/tiff',
+                    '.tif': 'image/tiff'
+                }
+                mime_type = extension_mime_map.get(file_info.file_extension.lower(), 'image/jpeg')
+                logger.info(f"Corrected MIME type for image {file_id}: {mime_type}")
+            
+            # Stream image file for viewing with optimized headers
+            logger.info(f"Streaming image file: {file_id}, type: {mime_type}")
             return FileResponse(
                 path=file_path,
-                media_type=file_info.mime_type,
+                media_type=mime_type,
                 headers={
                     "Cache-Control": "public, max-age=3600",  # 1시간 캐시
                     "Accept-Ranges": "bytes",
+                    "Content-Disposition": "inline",  # 브라우저에서 직접 표시
+                    "X-Content-Type-Options": "nosniff",  # MIME 타입 스니핑 방지
                 }
             )
         
         # For text files, read and return content
-        elif file_info.mime_type and file_info.mime_type.startswith('text/'):
+        elif mime_type and mime_type.startswith('text/'):
             try:
                 with open(file_path, 'r', encoding='utf-8') as f:
                     content = f.read()
@@ -241,7 +277,7 @@ async def view_file(
                         <div class="file-info">
                             <h2>File: {file_info.original_filename}</h2>
                             <p>Size: {file_info.file_size:,} bytes</p>
-                            <p>Type: {file_info.mime_type}</p>
+                            <p>Type: {mime_type}</p>
                             <p>Uploaded: {file_info.created_at}</p>
                         </div>
                         <div class="content">{content}</div>
@@ -271,7 +307,7 @@ async def view_file(
                         <div class="file-info">
                             <h2>File: {file_info.original_filename}</h2>
                             <p>Size: {file_info.file_size:,} bytes</p>
-                            <p>Type: {file_info.mime_type}</p>
+                            <p>Type: {mime_type}</p>
                             <p>Uploaded: {file_info.created_at}</p>
                             <p><strong>Note: File encoding may not be UTF-8</strong></p>
                         </div>
@@ -287,7 +323,7 @@ async def view_file(
             return FileResponse(
                 path=file_path,
                 filename=file_info.original_filename,
-                media_type=file_info.mime_type or 'application/octet-stream',
+                media_type=mime_type or 'application/octet-stream',
                 headers={
                     "Content-Disposition": f"attachment; filename=\"{file_info.original_filename}\""
                 }

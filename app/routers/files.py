@@ -212,15 +212,68 @@ async def upload_file(
         # Get file size
         file_size = len(content)
         
-        # Determine MIME type
+        # Enhanced MIME type detection
         mime_type = file.content_type
+        
+        # If no MIME type from client, try to detect from filename
+        if not mime_type or mime_type == 'application/octet-stream':
+            mime_type = mimetypes.guess_type(file.filename)[0]
+        
+        # If still no MIME type, use extension-based detection
         if not mime_type:
-            mime_type = mimetypes.guess_type(file.filename)[0] or 'application/octet-stream'
+            # Common image MIME type mapping
+            extension_mime_map = {
+                '.jpg': 'image/jpeg',
+                '.jpeg': 'image/jpeg',
+                '.png': 'image/png',
+                '.gif': 'image/gif',
+                '.bmp': 'image/bmp',
+                '.webp': 'image/webp',
+                '.tiff': 'image/tiff',
+                '.tif': 'image/tiff',
+                '.svg': 'image/svg+xml',
+                '.ico': 'image/x-icon',
+                '.pdf': 'application/pdf',
+                '.txt': 'text/plain',
+                '.md': 'text/markdown',
+                '.json': 'application/json',
+                '.xml': 'application/xml',
+                '.html': 'text/html',
+                '.htm': 'text/html',
+                '.css': 'text/css',
+                '.js': 'application/javascript',
+                '.zip': 'application/zip',
+                '.rar': 'application/vnd.rar',
+                '.7z': 'application/x-7z-compressed',
+                '.tar': 'application/x-tar',
+                '.gz': 'application/gzip',
+                '.mp3': 'audio/mpeg',
+                '.mp4': 'video/mp4',
+                '.avi': 'video/x-msvideo',
+                '.mov': 'video/quicktime',
+                '.wav': 'audio/wav',
+                '.doc': 'application/msword',
+                '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                '.xls': 'application/vnd.ms-excel',
+                '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                '.ppt': 'application/vnd.ms-powerpoint',
+                '.pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation'
+            }
+            
+            detected_mime = extension_mime_map.get(file_extension.lower())
+            if detected_mime:
+                mime_type = detected_mime
+                logger.info(f"Auto-detected MIME type for {file_id}: {detected_mime}")
+            else:
+                mime_type = 'application/octet-stream'
         
         # Validate MIME type format
         if not _is_valid_mime_type(mime_type):
             logger.warning(f"Invalid MIME type format: {mime_type}")
             mime_type = 'application/octet-stream'
+        
+        # Log MIME type detection result
+        logger.info(f"Final MIME type for {file_id}: {mime_type} (original: {file.content_type})")
         
         # Calculate file hash (simple implementation)
         file_hash = str(hash(content))[:16]
