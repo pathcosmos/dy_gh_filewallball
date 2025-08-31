@@ -13,10 +13,15 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Configuration
+# Load from .env file if it exists
+if [ -f ".env" ]; then
+    export $(grep -v '^#' .env | xargs)
+fi
+
 DB_ROOT_PASSWORD=${DB_ROOT_PASSWORD:-"FileWallBall_Root_2025!"}
 DB_NAME=${DB_NAME:-"filewallball_db"}
-DB_USER=${DB_USER:-"filewallball_user"}
-DB_PASSWORD=${DB_PASSWORD:-"FileWallBall_User_2025!"}
+DB_USER=${DB_USER:-"filewallball"}
+DB_PASSWORD=${DB_PASSWORD:-"jK9#zQ$p&2@f!L7^xY*"}
 DB_PORT=${DB_PORT:-13306}
 DB_HOST=${DB_HOST:-"localhost"}
 

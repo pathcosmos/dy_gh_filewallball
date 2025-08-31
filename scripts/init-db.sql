@@ -71,5 +71,5 @@ CREATE INDEX IF NOT EXISTS idx_files_original_filename_asc ON files(original_fil
 CREATE INDEX IF NOT EXISTS idx_files_file_size_asc ON files(file_size ASC);
 
 -- Grant permissions to application user
-GRANT ALL PRIVILEGES ON filewallball_db.* TO 'filewallball_user'@'%';
+GRANT ALL PRIVILEGES ON filewallball_db.* TO 'filewallball'@'%';
 FLUSH PRIVILEGES;

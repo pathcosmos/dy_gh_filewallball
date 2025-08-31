@@ -9,8 +9,8 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root_password}
       MYSQL_DATABASE: ${DB_NAME:-filewallball_db}
-      MYSQL_USER: ${DB_USER:-filewallball_user}
-      MYSQL_PASSWORD: ${DB_PASSWORD:-filewallball_user_password}
+      MYSQL_USER: ${DB_USER:-filewallball}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-jK9#zQ$p&2@f!L7^xY*}
       MYSQL_INITDB_SKIP_TZINFO: 1
     volumes:
       - mariadb_data:/var/lib/mysql

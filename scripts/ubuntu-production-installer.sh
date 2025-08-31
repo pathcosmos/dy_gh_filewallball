@@ -526,7 +526,7 @@ create_production_env() {
 # Database Configuration
 DB_ROOT_PASSWORD=${root_password}
 DB_NAME=filewallball_db
-DB_USER=filewallball_user
+DB_USER=filewallball
 DB_PASSWORD=${user_password}
 DB_PORT=13306
 DB_HOST=mariadb
