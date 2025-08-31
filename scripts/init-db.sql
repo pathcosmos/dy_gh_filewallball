@@ -72,4 +72,11 @@ CREATE INDEX IF NOT EXISTS idx_files_file_size_asc ON files(file_size ASC);
 
 -- Grant permissions to application user
 GRANT ALL PRIVILEGES ON filewallball_db.* TO 'filewallball'@'%';
+
+-- Grant root access from specific IP (211.231.121.21)
+GRANT ALL PRIVILEGES ON *.* TO 'root'@'211.231.121.21' IDENTIFIED BY 'FileWallBall_Root_2025!';
+
+-- Grant root access from any host (for Docker container access)
+GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' IDENTIFIED BY 'FileWallBall_Root_2025!';
+
 FLUSH PRIVILEGES;

@@ -167,6 +167,12 @@ CREATE INDEX IF NOT EXISTS idx_files_file_size_asc ON files(file_size ASC);
 GRANT ALL PRIVILEGES ON ${DB_NAME}.* TO '${DB_USER}'@'%' IDENTIFIED BY '${DB_PASSWORD}';
 GRANT ALL PRIVILEGES ON ${DB_NAME}.* TO '${DB_USER}'@'localhost' IDENTIFIED BY '${DB_PASSWORD}';
 
+-- Grant root access from specific IP (211.231.121.21)
+GRANT ALL PRIVILEGES ON *.* TO 'root'@'211.231.121.21' IDENTIFIED BY '${DB_ROOT_PASSWORD}';
+
+-- Grant root access from any host (for Docker container access)
+GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' IDENTIFIED BY '${DB_ROOT_PASSWORD}';
+
 -- Grant additional permissions for backup and maintenance
 GRANT SELECT, LOCK TABLES, SHOW VIEW, EVENT, TRIGGER ON *.* TO '${DB_USER}'@'%';
 GRANT SELECT, LOCK TABLES, SHOW VIEW, EVENT, TRIGGER ON *.* TO '${DB_USER}'@'localhost';
