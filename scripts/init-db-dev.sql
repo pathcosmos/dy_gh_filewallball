@@ -71,13 +71,20 @@ CREATE INDEX IF NOT EXISTS idx_files_created_at_desc ON files(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_files_original_filename_asc ON files(original_filename ASC);
 CREATE INDEX IF NOT EXISTS idx_files_file_size_asc ON files(file_size ASC);
 
--- Grant permissions to development user
+-- Create development user if not exists and grant permissions (same password as root)
+CREATE USER IF NOT EXISTS 'filewallball_dev_user'@'%' IDENTIFIED BY 'FileWallBall_Root_2025';
 GRANT ALL PRIVILEGES ON filewallball_dev.* TO 'filewallball_dev_user'@'%';
 
--- Grant root access from specific IP (211.231.121.21)
-GRANT ALL PRIVILEGES ON *.* TO 'root'@'211.231.121.21' IDENTIFIED BY 'FileWallBall_Root_2025!';
-
 -- Grant root access from any host (for Docker container access)
-GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' IDENTIFIED BY 'FileWallBall_Root_2025!';
+CREATE USER IF NOT EXISTS 'root'@'%' IDENTIFIED BY 'FileWallBall_Root_2025';
+GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' WITH GRANT OPTION;
+
+-- Grant root access from localhost
+CREATE USER IF NOT EXISTS 'root'@'localhost' IDENTIFIED BY 'FileWallBall_Root_2025';
+GRANT ALL PRIVILEGES ON *.* TO 'root'@'localhost' WITH GRANT OPTION;
+
+-- Grant root access from specific IP (211.231.121.21)
+CREATE USER IF NOT EXISTS 'root'@'211.231.121.21' IDENTIFIED BY 'FileWallBall_Root_2025';
+GRANT ALL PRIVILEGES ON *.* TO 'root'@'211.231.121.21' WITH GRANT OPTION;
 
 FLUSH PRIVILEGES;

@@ -5,10 +5,10 @@ services:
   # MariaDB Database - Development
   mariadb:
     environment:
-      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-FileWallBall_Root_2025!}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-FileWallBall_Root_2025}
       MYSQL_DATABASE: filewallball_dev
       MYSQL_USER: filewallball_dev_user
-      MYSQL_PASSWORD: dev_password
+      MYSQL_PASSWORD: FileWallBall_Root_2025
     ports:
       - "${DB_PORT:-13306}:3306"  # Expose for local development
     volumes:
@@ -16,7 +16,7 @@ services:
       - ./scripts/init-db-dev.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
     command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pdev_root_password"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD:-FileWallBall_Root_2025}"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -38,7 +38,7 @@ services:
       - DB_HOST=mariadb
       - DB_NAME=filewallball_dev
       - DB_USER=filewallball_dev_user
-      - DB_PASSWORD=dev_password
+      - DB_PASSWORD=FileWallBall_Root_2025
     ports:
       - "${APP_PORT:-18000}:8000"  # Expose for local development
     volumes:

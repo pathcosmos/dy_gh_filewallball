@@ -7,10 +7,10 @@ services:
     container_name: filewallball-mariadb
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-FileWallBall_Root_2025!}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-FileWallBall_Root_2025}
       MYSQL_DATABASE: ${DB_NAME:-filewallball_db}
       MYSQL_USER: ${DB_USER:-filewallball}
-      MYSQL_PASSWORD: ${DB_PASSWORD:-jK9#zQ$p&2@f!L7^xY*}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-FileWallBall_Root_2025}
       MYSQL_INITDB_SKIP_TZINFO: 1
     volumes:
       - mariadb_data:/var/lib/mysql
@@ -27,7 +27,7 @@ services:
       - /tmp
       - /var/tmp
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD:-FileWallBall_Root_2025!}"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD:-FileWallBall_Root_2025}"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -43,8 +43,8 @@ services:
       - DB_HOST=mariadb
       - DB_PORT=3306
       - DB_NAME=filewallball_db
-      - DB_USER=${DB_USER:-filewallball_user}
-      - DB_PASSWORD=${DB_PASSWORD:-filewallball_user_password}
+      - DB_USER=${DB_USER:-filewallball}
+      - DB_PASSWORD=${DB_PASSWORD:-FileWallBall_Root_2025}
       - UPLOAD_DIR=/app/uploads
       - HOST_UPLOAD_DIR=${HOST_UPLOAD_DIR:-./uploads}
       - CONTAINER_UPLOAD_DIR=/app/uploads
@@ -131,7 +131,7 @@ services:
     environment:
       - DB_HOST=mariadb
       - DB_PORT=3306
-      - DB_ROOT_PASSWORD=${DB_ROOT_PASSWORD:-FileWallBall_Root_2025!}
+      - DB_ROOT_PASSWORD=${DB_ROOT_PASSWORD:-FileWallBall_Root_2025}
       - BACKUP_RETENTION_DAYS=${BACKUP_RETENTION_DAYS:-7}
       - BACKUP_SCHEDULE=${BACKUP_SCHEDULE:-0 2 * * *}
     networks:
