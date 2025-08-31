@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Optional
 from datetime import datetime
 
-from fastapi import APIRouter, HTTPException, Depends, Path
+from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import FileResponse, HTMLResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -79,7 +79,7 @@ curl -X GET "http://localhost:8000/download/550e8400-e29b-41d4-a716-446655440000
     }
 )
 async def download_file(
-    file_id: str = Path(..., description="다운로드할 파일의 고유 ID"), 
+    file_id: str, 
     db: AsyncSession = Depends(get_async_session)
 ):
     """파일 다운로드 endpoint"""
@@ -193,7 +193,7 @@ curl -X GET "http://localhost:8000/view/550e8400-e29b-41d4-a716-446655440000"
     }
 )
 async def view_file(
-    file_id: str = Path(..., description="볼 파일의 고유 ID"), 
+    file_id: str, 
     db: AsyncSession = Depends(get_async_session)
 ):
     """파일 내용 보기 endpoint"""
@@ -447,7 +447,7 @@ curl -X GET "http://localhost:8000/preview/550e8400-e29b-41d4-a716-446655440000"
     }
 )
 async def preview_file(
-    file_id: str = Path(..., description="미리보기할 파일의 고유 ID"), 
+    file_id: str, 
     db: AsyncSession = Depends(get_async_session)
 ):
     """파일 미리보기 endpoint"""
@@ -645,7 +645,7 @@ curl -X GET "http://localhost:8000/thumbnail/550e8400-e29b-41d4-a716-44665544000
     }
 )
 async def thumbnail_file(
-    file_id: str = Path(..., description="썸네일을 생성할 이미지 파일의 고유 ID"), 
+    file_id: str, 
     db: AsyncSession = Depends(get_async_session)
 ):
     """이미지 썸네일 생성 endpoint"""

@@ -13,7 +13,7 @@ import uuid
 from datetime import datetime
 
 import aiofiles
-from fastapi import APIRouter, File, HTTPException, Query, UploadFile, Depends, Path
+from fastapi import APIRouter, File, HTTPException, Query, UploadFile, Depends
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -78,17 +78,23 @@ class FileInfoResponse(BaseModel):
     upload_time: datetime = Field(..., description="업로드 시간")
     file_hash: Optional[str] = Field(None, description="파일 해시값")
     download_count: int = Field(0, description="다운로드 횟수")
+    download_url: str = Field(..., description="파일 다운로드 URL")
+    view_url: str = Field(..., description="파일 뷰어 URL (이미지는 여기서 확인 가능)")
+    preview_url: Optional[str] = Field(None, description="파일 미리보기 URL (이미지 썸네일)")
 
     class Config:
         schema_extra = {
             "example": {
                 "file_id": "550e8400-e29b-41d4-a716-446655440000",
-                "filename": "example.txt",
+                "filename": "example.png",
                 "file_size": 1024,
-                "mime_type": "text/plain",
+                "mime_type": "image/png",
                 "upload_time": "2025-08-25T01:00:00",
                 "file_hash": "a1b2c3d4e5f6",
-                "download_count": 5
+                "download_count": 5,
+                "download_url": "/download/550e8400-e29b-41d4-a716-446655440000",
+                "view_url": "/view/550e8400-e29b-41d4-a716-446655440000",
+                "preview_url": "/preview/550e8400-e29b-41d4-a716-446655440000"
             }
         }
 
@@ -428,7 +434,7 @@ curl -X GET "http://localhost:8000/api/v1/files/550e8400-e29b-41d4-a716-44665544
     }
 )
 async def get_file_info(
-    file_id: str = Path(..., description="조회할 파일의 고유 ID"), 
+    file_id: str, 
     db: AsyncSession = Depends(get_async_session)
 ):
     """파일 정보 조회 endpoint"""
@@ -447,6 +453,12 @@ async def get_file_info(
         # 다운로드 횟수 조회 (향후 구현)
         download_count = 0  # TODO: Redis나 별도 테이블에서 조회
         
+        # 이미지 파일 여부 확인
+        is_image = (
+            file_info.mime_type and 
+            file_info.mime_type.startswith('image/')
+        )
+        
         return FileInfoResponse(
             file_id=file_info.file_uuid,
             filename=file_info.original_filename,
@@ -454,7 +466,10 @@ async def get_file_info(
             mime_type=file_info.mime_type,
             upload_time=file_info.created_at,
             file_hash=file_info.file_hash,
-            download_count=download_count
+            download_count=download_count,
+            download_url=f"/download/{file_info.file_uuid}",
+            view_url=f"/view/{file_info.file_uuid}",
+            preview_url=f"/preview/{file_info.file_uuid}" if is_image else None
         )
         
     except HTTPException:
@@ -685,7 +700,7 @@ curl -X DELETE "http://localhost:8000/api/v1/files/550e8400-e29b-41d4-a716-44665
     }
 )
 async def deactivate_file(
-    file_id: str = Path(..., description="비활성화할 파일의 고유 ID"), 
+    file_id: str, 
     db: AsyncSession = Depends(get_async_session)
 ):
     """파일 비활성화 endpoint"""
