@@ -9,12 +9,13 @@ services:
       MYSQL_DATABASE: ${DB_NAME}
       MYSQL_USER: ${DB_USER}
       MYSQL_PASSWORD: ${DB_PASSWORD}
+      TZ: Asia/Seoul
     ports: []  # No external port exposure for security
     volumes:
       - mariadb_prod_data:/var/lib/mysql
       - ./scripts/init-db-prod.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
       - mariadb_prod_backups:/var/backups
-    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci --innodb-buffer-pool-size=1G
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci --innodb-buffer-pool-size=1G --default-time-zone='+09:00'
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD:-FileWallBall_Root_2025!}"]
       interval: 30s

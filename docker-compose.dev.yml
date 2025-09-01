@@ -9,12 +9,13 @@ services:
       MYSQL_DATABASE: filewallball_dev
       MYSQL_USER: filewallball_dev_user
       MYSQL_PASSWORD: FileWallBall_Root_2025
+      TZ: Asia/Seoul
     ports:
       - "${DB_PORT:-13306}:3306"  # Expose for local development
     volumes:
       - mariadb_dev_data:/var/lib/mysql
       - ./scripts/init-db-dev.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
-    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci --default-time-zone='+09:00'
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD:-FileWallBall_Root_2025}"]
       interval: 30s

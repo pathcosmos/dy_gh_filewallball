@@ -12,6 +12,8 @@ services:
       MYSQL_USER: ${DB_USER:-filewallball}
       MYSQL_PASSWORD: ${DB_PASSWORD:-FileWallBall_Root_2025}
       MYSQL_INITDB_SKIP_TZINFO: 1
+      TZ: Asia/Seoul
+    command: --default-time-zone='+09:00'
     volumes:
       - mariadb_data:/var/lib/mysql
       - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
