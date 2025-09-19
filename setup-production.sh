@@ -14,7 +14,7 @@ echo -e "${BLUE}🚀 FileWallBall 운영환경 설정 시작...${NC}"
 
 # 현재 디렉토리 확인
 CURRENT_DIR=$(pwd)
-PROJECT_DIR="/home/lanco/cursor/temp_git/dy_gh_filewallball"
+PROJECT_DIR="/srv/file-server/dy_gh_filewallball_250901"
 
 if [ "$CURRENT_DIR" != "$PROJECT_DIR" ]; then
     echo -e "${YELLOW}⚠️  프로젝트 디렉토리로 이동: $PROJECT_DIR${NC}"

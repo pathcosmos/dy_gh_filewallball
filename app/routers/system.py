@@ -6,7 +6,7 @@ project key generation.
 """
 
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Dict, Any
 
 from fastapi import APIRouter, HTTPException, Depends, Header, Request, Path
 from pydantic import BaseModel, Field
@@ -15,6 +15,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.dependencies.database import get_async_session
 from app.services.project_key_service import ProjectKeyService
 from app.utils.logging_config import get_logger
+from app.utils.system_info import (
+    get_all_system_info,
+    get_health_status,
+    get_uptime
+)
 
 # Initialize router
 router = APIRouter(
@@ -33,13 +38,24 @@ logger = get_logger(__name__)
 # Response models
 class HealthResponse(BaseModel):
     """시스템 상태 응답 모델"""
-    status: str = Field(..., description="시스템 상태 (healthy, degraded, down)")
+    status: str = Field(..., description="시스템 상태 (healthy, degraded, critical)")
     timestamp: datetime = Field(..., description="상태 확인 시간")
     service: str = Field(..., description="서비스 이름")
     version: str = Field(..., description="서비스 버전")
     uptime: Optional[str] = Field(None, description="서비스 가동 시간")
     memory_usage: Optional[str] = Field(None, description="메모리 사용량")
     disk_usage: Optional[str] = Field(None, description="디스크 사용량")
+    cpu_usage: Optional[str] = Field(None, description="CPU 사용량")
+    hostname: Optional[str] = Field(None, description="서버 호스트명")
+    local_ip: Optional[str] = Field(None, description="로컬 IP 주소")
+    platform: Optional[str] = Field(None, description="플랫폼 정보")
+    python_version: Optional[str] = Field(None, description="Python 버전")
+    process_memory_mb: Optional[float] = Field(None, description="프로세스 메모리 사용량 (MB)")
+    load_average: Optional[list] = Field(None, description="시스템 부하 평균 (1분, 5분, 15분)")
+    database_status: Optional[str] = Field(None, description="데이터베이스 연결 상태")
+    in_docker: Optional[bool] = Field(None, description="Docker 컨테이너에서 실행 중인지 여부")
+    container_id: Optional[str] = Field(None, description="Docker 컨테이너 ID")
+    system_info: Optional[Dict[str, Any]] = Field(None, description="전체 시스템 정보")
 
     class Config:
         schema_extra = {
@@ -49,8 +65,18 @@ class HealthResponse(BaseModel):
                 "service": "FileWallBall API",
                 "version": "2.0.0",
                 "uptime": "2 days, 5 hours, 30 minutes",
-                "memory_usage": "45.2 MB",
-                "disk_usage": "1.2 GB / 50 GB"
+                "memory_usage": "45.2 MB / 8192.0 MB (5.5%)",
+                "disk_usage": "1.2 GB / 50.0 GB (2.4%)",
+                "cpu_usage": "15.2% (4 cores)",
+                "hostname": "production-server",
+                "local_ip": "192.168.1.100",
+                "platform": "Linux-5.15.0-153-generic-x86_64",
+                "python_version": "3.11.0",
+                "process_memory_mb": 45.2,
+                "load_average": [0.52, 0.58, 0.65],
+                "database_status": "connected",
+                "in_docker": True,
+                "container_id": "abc123def456"
             }
         }
 
@@ -189,15 +215,8 @@ async def health_check(
 ):
     """시스템 상태 확인 endpoint"""
     try:
-        # 기본 상태 정보
-        status_info = {
-            "status": "healthy",
-            "timestamp": datetime.now(),
-            "service": "FileWallBall API",
-            "version": "2.0.0"
-        }
-        
         # 데이터베이스 연결 확인
+        db_connected = True
         try:
             from sqlalchemy import text
             await db.execute(text("SELECT 1"))
@@ -205,23 +224,50 @@ async def health_check(
         except Exception as e:
             logger.warning(f"Database health check failed: {e}")
             db_status = "disconnected"
-            status_info["status"] = "degraded"
-        
-        # 추가 메트릭 (향후 구현)
-        # TODO: 실제 시스템 메트릭 수집
-        status_info.update({
-            "uptime": "2 days, 5 hours, 30 minutes",  # 실제 계산 필요
-            "memory_usage": "45.2 MB",  # psutil 사용
-            "disk_usage": "1.2 GB / 50 GB",  # 실제 계산 필요
-            "database": db_status
-        })
-        
-        logger.info(f"Health check completed: {status_info['status']}")
+            db_connected = False
+
+        # 실제 시스템 정보 수집
+        system_info = get_all_system_info()
+
+        # 건강 상태 결정
+        health_status = get_health_status(db_connected)
+
+        # 응답 데이터 구성
+        status_info = {
+            "status": health_status,
+            "timestamp": datetime.now(),
+            "service": "FileWallBall API - Production",
+            "version": "2.0.0",
+            "uptime": system_info.get("uptime"),
+            "memory_usage": system_info.get("memory_usage"),
+            "disk_usage": system_info.get("disk_usage"),
+            "cpu_usage": system_info.get("cpu_usage"),
+            "hostname": system_info.get("hostname"),
+            "local_ip": system_info.get("local_ip"),
+            "platform": system_info.get("platform"),
+            "python_version": system_info.get("python_version"),
+            "process_memory_mb": system_info.get("process_memory_mb"),
+            "load_average": system_info.get("load_average"),
+            "database_status": db_status,
+            "in_docker": system_info.get("in_docker"),
+            "container_id": system_info.get("container_id"),
+            "system_info": system_info  # 전체 정보도 포함
+        }
+
+        logger.info(f"Health check completed: {status_info['status']} from {system_info.get('hostname')}")
         return HealthResponse(**status_info)
-        
+
     except Exception as e:
         logger.error(f"Health check error: {e}")
-        raise HTTPException(status_code=500, detail="Health check failed")
+        # 에러 발생 시에도 기본 정보는 반환
+        return HealthResponse(
+            status="critical",
+            timestamp=datetime.now(),
+            service="FileWallBall API - Production",
+            version="2.0.0",
+            uptime=get_uptime(),
+            system_info={"error": str(e)}
+        )
 
 
 @router.post(

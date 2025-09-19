@@ -1,0 +1,32 @@
+[Unit]
+Description=FileWallBall Docker Compose Application - 파일 관리 시스템
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+User=dkrns_tms
+Group=dkrns_tms
+WorkingDirectory=/srv/file-server/dy_gh_filewallball_250901
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+ExecStart=/usr/bin/docker-compose --env-file .env.prod up -d
+ExecStop=/usr/bin/docker-compose --env-file .env.prod down
+ExecReload=/usr/bin/docker-compose --env-file .env.prod restart
+TimeoutStartSec=300
+Restart=on-failure
+RestartSec=30
+StandardOutput=journal
+StandardError=journal
+
+# Security settings
+NoNewPrivileges=yes
+ProtectSystem=strict
+ReadWritePaths=/srv/file-server/dy_gh_filewallball_250901
+ReadWritePaths=/tmp
+ReadWritePaths=/var/tmp
+PrivateTmp=no
+
+[Install]
+WantedBy=multi-user.target

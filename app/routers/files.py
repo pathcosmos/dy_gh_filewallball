@@ -13,7 +13,7 @@ import uuid
 from datetime import datetime
 
 import aiofiles
-from fastapi import APIRouter, File, HTTPException, Query, UploadFile, Depends
+from fastapi import APIRouter, File, HTTPException, Query, UploadFile, Depends, Header
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -110,24 +110,29 @@ def _is_valid_mime_type(mime_type: str) -> bool:
 
 
 @router.post(
-    "/upload", 
+    "/upload",
     response_model=FileUploadResponse,
-    summary="파일 업로드",
+    summary="파일 업로드 (API 키 필요)",
     description="""
-## 📤 파일 업로드
+## 📤 파일 업로드 (인증 필요)
 
 파일을 시스템에 업로드하고 저장합니다.
 
+### 🔒 인증
+- **X-API-Key** 헤더에 유효한 API 키가 필요합니다
+
 ### 🔧 사용 방법
 1. **multipart/form-data** 형식으로 파일을 전송
-2. **파일 크기 제한**: 최대 100MB
-3. **지원 형식**: 모든 파일 형식 지원
-4. **자동 생성**: 고유 파일 ID, 저장 경로, 해시값
+2. **X-API-Key** 헤더에 API 키 포함
+3. **파일 크기 제한**: 최대 100MB
+4. **지원 형식**: 모든 파일 형식 지원
+5. **자동 생성**: 고유 파일 ID, 저장 경로, 해시값
 
 ### 📋 요청 예시
 ```bash
 curl -X POST "http://localhost:8000/api/v1/upload" \
   -H "accept: application/json" \
+  -H "X-API-Key: YOUR_API_KEY" \
   -H "Content-Type: multipart/form-data" \
   -F "file=@example.txt"
 ```
@@ -168,15 +173,24 @@ curl -X POST "http://localhost:8000/api/v1/upload" \
             }
         },
         400: {"description": "잘못된 요청 (파일명 없음, 빈 파일)"},
+        401: {"description": "인증 실패 (API 키가 없거나 유효하지 않음)"},
         413: {"description": "파일 크기 초과 (100MB 제한)"},
         500: {"description": "서버 내부 오류"}
     }
 )
 async def upload_file(
     file: UploadFile = File(..., description="업로드할 파일"),
-    db: AsyncSession = Depends(get_async_session)
+    db: AsyncSession = Depends(get_async_session),
+    x_api_key: Optional[str] = Header(None, alias="X-API-Key")
 ):
     """파일 업로드 endpoint"""
+    # API 키 검증
+    VALID_API_KEY = "dkpia_sdpALcQuO3lDmTy8hY_zwltJpYBRFRTmnRbKrSCMc_wML4Rq"
+
+    if x_api_key != VALID_API_KEY:
+        logger.warning(f"Invalid API key attempt for upload: {x_api_key}")
+        raise HTTPException(status_code=401, detail="Invalid or missing API key")
+
     try:
         logger.info(f"Starting file upload for: {file.filename}")
         
